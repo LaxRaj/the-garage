@@ -19,14 +19,51 @@ try {
     console.warn('⚠️  Server will continue without Google OAuth. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Railway environment variables.');
 }
 
-// Database
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('✅ Connected to The Garage DB'))
-    .catch(err => {
+// Database Connection with proper options for production
+const connectDB = async () => {
+    try {
+        if (!process.env.MONGO_URI) {
+            throw new Error('MONGO_URI is not defined in environment variables');
+        }
+
+        const mongooseOptions = {
+            serverSelectionTimeoutMS: 30000, // 30 seconds for server selection
+            socketTimeoutMS: 45000, // 45 seconds for socket operations
+            connectTimeoutMS: 30000, // 30 seconds for initial connection
+            maxPoolSize: 10, // Maintain up to 10 socket connections
+            minPoolSize: 2, // Maintain at least 2 socket connections
+            retryWrites: true,
+            w: 'majority'
+        };
+
+        await mongoose.connect(process.env.MONGO_URI, mongooseOptions);
+        console.log('✅ Connected to The Garage DB');
+        
+        // Handle connection events
+        mongoose.connection.on('error', (err) => {
+            console.error('❌ MongoDB connection error:', err);
+        });
+        
+        mongoose.connection.on('disconnected', () => {
+            console.warn('⚠️  MongoDB disconnected. Attempting to reconnect...');
+        });
+        
+        mongoose.connection.on('reconnected', () => {
+            console.log('✅ MongoDB reconnected');
+        });
+        
+        return true; // Connection successful
+        
+    } catch (err) {
         console.error('❌ MongoDB connection error:', err.message);
-        console.log('⚠️  Check your MONGO_URI in .env file');
-        // Don't exit - let server start anyway for development
-    });
+        console.log('⚠️  Check your MONGO_URI in environment variables');
+        console.log('⚠️  For MongoDB Atlas, ensure:');
+        console.log('   1. IP whitelist includes 0.0.0.0/0 (or Railway IPs)');
+        console.log('   2. Database user has correct permissions');
+        console.log('   3. Connection string is correct');
+        throw err; // Re-throw to be caught by caller
+    }
+};
 
 // Middleware
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -71,13 +108,28 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-const server = app.listen(PORT, () => {
-    console.log(`🚀 The Garage is open on port ${PORT}`);
-    console.log(`📍 http://localhost:${PORT}`);
-}).on('error', (err) => {
-    console.error('❌ Server error:', err.message);
-    if (err.code === 'EADDRINUSE') {
-        console.log(`⚠️  Port ${PORT} is already in use. Try a different port.`);
-    }
-    process.exit(1);
-});
+// Start server after attempting database connection
+const startServer = async () => {
+    // Attempt database connection (don't block server startup)
+    connectDB().catch(err => {
+        console.warn('⚠️  Database connection failed, but server will start anyway');
+        console.warn('   Some features may not work until database is connected');
+    });
+    
+    // Start server immediately (don't wait for DB)
+    const server = app.listen(PORT, () => {
+        console.log(`🚀 The Garage is open on port ${PORT}`);
+        console.log(`📍 http://localhost:${PORT}`);
+        if (mongoose.connection.readyState !== 1) {
+            console.warn('⚠️  Waiting for database connection...');
+        }
+    }).on('error', (err) => {
+        console.error('❌ Server error:', err.message);
+        if (err.code === 'EADDRINUSE') {
+            console.log(`⚠️  Port ${PORT} is already in use. Try a different port.`);
+        }
+        process.exit(1);
+    });
+};
+
+startServer();
