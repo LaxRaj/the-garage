@@ -11,9 +11,12 @@ const app = express();
 // Configs
 try {
     require('./config/passport')(passport);
+    console.log('✅ Passport configured successfully');
 } catch (err) {
     console.error('❌ Passport config error:', err.message);
-    process.exit(1);
+    // Don't exit - allow server to start without OAuth for development/testing
+    // In production, ensure environment variables are set in Railway dashboard
+    console.warn('⚠️  Server will continue without Google OAuth. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Railway environment variables.');
 }
 
 // Database

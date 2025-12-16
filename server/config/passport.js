@@ -2,6 +2,13 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
 
 module.exports = function(passport) {
+    // Only initialize Google OAuth if credentials are provided
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.warn('⚠️  Google OAuth credentials not found. Google login will be disabled.');
+        console.warn('   Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your environment variables.');
+        return; // Exit early, don't initialize GoogleStrategy
+    }
+    
     // Construct the full callback URL
     const callbackURL = process.env.CALLBACK_URL || 
         `http://localhost:${process.env.PORT || 3001}/auth/google/callback`;

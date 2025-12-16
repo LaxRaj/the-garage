@@ -5,16 +5,29 @@ const crypto = require('crypto');
 const router = express.Router();
 
 // 1. Trigger Google Login
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google', (req, res, next) => {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        return res.status(503).json({ 
+            error: 'Google OAuth not configured',
+            message: 'Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in environment variables'
+        });
+    }
+    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
 
 // 2. Google Callback (Where they come back after logging in)
-router.get('/google/callback', 
-    passport.authenticate('google', { failureRedirect: '/' }),
-    (req, res) => {
-        // Success! Redirect back to the garage door
-        res.redirect('/');
+router.get('/google/callback', (req, res, next) => {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        return res.status(503).json({ 
+            error: 'Google OAuth not configured',
+            message: 'Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in environment variables'
+        });
     }
-);
+    passport.authenticate('google', { failureRedirect: '/' })(req, res, next);
+}, (req, res) => {
+    // Success! Redirect back to the garage door
+    res.redirect('/');
+});
 
 // 3. Logout
 router.get('/logout', (req, res, next) => {
