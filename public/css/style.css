@@ -2330,6 +2330,48 @@ body.scroll-enabled {
     display: block;
 }
 
+/* Terminal Back Button */
+.terminal-back-btn {
+    position: fixed;
+    top: 2rem;
+    left: 2rem;
+    z-index: 250;
+    background: rgba(10, 10, 10, 0.9);
+    border: 1px solid #333;
+    color: #fff;
+    font-family: var(--font-tech, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    padding: 0.75rem 1.25rem;
+    cursor: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.terminal-back-btn:hover {
+    border-color: var(--thermal-red, #ff3300);
+    background: rgba(255, 51, 0, 0.1);
+    box-shadow: 0 0 20px rgba(255, 51, 0, 0.3);
+}
+
+.terminal-back-btn .back-arrow {
+    font-size: 16px;
+    color: var(--thermal-red, #ff3300);
+    transition: transform 0.3s ease;
+}
+
+.terminal-back-btn:hover .back-arrow {
+    transform: translateX(-4px);
+}
+
+.terminal-back-btn .back-text {
+    opacity: 0.9;
+}
+
 /* CRT Scanline Overlay */
 .crt-scanline {
     position: absolute;

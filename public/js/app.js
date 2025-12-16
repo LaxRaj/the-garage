@@ -393,9 +393,13 @@ async function initTerminal() {
         // Mock transaction history (replace with API call later)
         transactionHistory = [];
         
+        // Load user's bid history
+        await loadBidHistory();
+        
         // Populate Asset Ledger
         renderGarage();
         renderHistory();
+        renderBids();
         
         // Setup Contractor Mode if applicable
         if (userRole === 'contractor') {
@@ -410,6 +414,9 @@ async function initTerminal() {
         
         // Setup Logout Button
         setupLogoutButton();
+        
+        // Setup Back Button
+        setupBackButton();
         
     } catch (error) {
         console.error('Terminal initialization error:', error);
@@ -530,6 +537,80 @@ function renderHistory() {
     });
 }
 
+// Global state for user's bids
+let userBids = [];
+
+async function loadBidHistory() {
+    try {
+        const response = await fetch('/api/user/bids');
+        if (response.ok) {
+            const bids = await response.json();
+            userBids = bids.map(bid => ({
+                id: bid._id || bid.id,
+                carId: bid.car?._id || bid.car?.id,
+                asset: bid.car ? `${bid.car.make || ''} ${bid.car.model || ''}`.trim() : 'UNKNOWN_ASSET',
+                amount: bid.amount,
+                date: new Date(bid.timestamp).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+                timestamp: bid.timestamp,
+                status: bid.car?.status === 'SOLD' ? 'CLOSED' : 'ACTIVE'
+            }));
+        } else {
+            userBids = [];
+        }
+    } catch (error) {
+        console.error('Error loading bid history:', error);
+        userBids = [];
+    }
+}
+
+function renderBids() {
+    const bidsTbody = document.getElementById('bids-tbody');
+    if (!bidsTbody) return;
+    
+    bidsTbody.innerHTML = '';
+    
+    if (userBids.length === 0) {
+        bidsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #555; padding: 2rem;">NO_BIDS_PLACED</td></tr>';
+        return;
+    }
+    
+    userBids.forEach((bid, index) => {
+        const row = document.createElement('tr');
+        row.className = 'bid-row';
+        
+        const statusClass = bid.status === 'CLOSED' ? 'status-sold' : 'status-listed';
+        const formattedAmount = bid.amount >= 1000000 
+            ? `$${(bid.amount / 1000000).toFixed(1)}M` 
+            : `$${(bid.amount / 1000).toFixed(0)}K`;
+        
+        row.innerHTML = `
+            <td>${bid.asset}</td>
+            <td>${formattedAmount}</td>
+            <td>${bid.date}</td>
+            <td class="${statusClass}">${bid.status}</td>
+        `;
+        
+        bidsTbody.appendChild(row);
+        
+        // Stagger fade-in animation
+        gsap.fromTo(row, 
+            { opacity: 0, y: 20 },
+            { 
+                opacity: 1, 
+                y: 0, 
+                duration: 0.5, 
+                delay: index * 0.1
+            }
+        );
+    });
+}
+
 async function handleDeployToggle(carId, assetRef) {
     const asset = userGarage.find(a => a.ref === assetRef || a.carId === carId);
     
@@ -582,6 +663,10 @@ function setupLedgerTabs() {
                 if (content.id === `tab-${targetTab}`) {
                     content.style.display = 'block';
                     content.classList.add('active');
+                    // Refresh bid history when switching to bids tab
+                    if (targetTab === 'bids') {
+                        loadBidHistory().then(() => renderBids());
+                    }
                 } else {
                     content.style.display = 'none';
                 }

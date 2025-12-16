@@ -156,6 +156,10 @@
     <!-- SCREEN 4: THE TERMINAL (Cyber-Industrial Command Center) -->
     <section id="terminal-section" style="display: none;">
         <div class="crt-scanline"></div>
+        <button class="terminal-back-btn" id="terminal-back-btn">
+            <span class="back-arrow">←</span>
+            <span class="back-text">RETURN_TO_GARAGE</span>
+        </button>
         <div class="terminal-container">
             <!-- Sidebar Rail (Left) -->
             <nav class="terminal-sidebar">
@@ -217,6 +221,7 @@
                         <div class="ledger-tabs">
                             <button class="tab-btn active" data-tab="garage">CURRENT_GARAGE</button>
                             <button class="tab-btn" data-tab="history">TRANSACTION_HISTORY</button>
+                            <button class="tab-btn" data-tab="bids">BID_HISTORY</button>
                         </div>
                     </div>
                     
@@ -251,6 +256,23 @@
                                 </tr>
                             </thead>
                             <tbody id="history-tbody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Bid History Tab -->
+                    <div class="tab-content" id="tab-bids">
+                        <table class="ledger-table">
+                            <thead>
+                                <tr>
+                                    <th>ASSET</th>
+                                    <th>BID_AMOUNT</th>
+                                    <th>DATE</th>
+                                    <th>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bids-tbody">
                                 <!-- Populated by JavaScript -->
                             </tbody>
                         </table>

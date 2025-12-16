@@ -246,4 +246,19 @@ router.get('/user/role', ensureAuthenticated, async (req, res) => {
     }
 });
 
+// @route   GET /api/user/bids
+// @desc    Get current user's bid history
+router.get('/user/bids', ensureAuthenticated, async (req, res) => {
+    try {
+        const bids = await Bid.find({ user: req.user._id })
+            .populate('car', 'make model price image')
+            .sort({ timestamp: -1 })
+            .limit(100);
+        res.json(bids);
+    } catch (err) {
+        console.error('Bids fetch error:', err);
+        res.status(500).json({ error: 'Server Error: Could not retrieve bids.' });
+    }
+});
+
 module.exports = router;
