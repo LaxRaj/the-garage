@@ -107,6 +107,18 @@ sessions/
 # Uploaded files (if any)
 uploads/
 
+# Large 3D model files (consider using Git LFS for these)
+*.glb
+*.gltf
+*.fbx
+*.obj
+
+# Large image files (if not needed in repo)
+# Uncomment if you want to exclude large images
+# *.png
+# *.jpg
+# *.jpeg
+
 # Compiled files
 *.com
 *.class
