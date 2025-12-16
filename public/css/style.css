@@ -2332,24 +2332,23 @@ body.scroll-enabled {
 
 /* Terminal Back Button */
 .terminal-back-btn {
-    position: fixed;
-    top: 2rem;
-    left: 2rem;
-    z-index: 250;
+    grid-column: 1;
+    grid-row: 1;
     background: rgba(10, 10, 10, 0.9);
     border: 1px solid #333;
+    border-bottom: none;
     color: #fff;
     font-family: var(--font-tech, 'JetBrains Mono', monospace);
-    font-size: 11px;
-    padding: 0.75rem 1.25rem;
+    font-size: 24px;
+    padding: 1rem;
     cursor: none;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    justify-content: center;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
+    width: 100%;
+    height: 100%;
 }
 
 .terminal-back-btn:hover {
@@ -2359,17 +2358,13 @@ body.scroll-enabled {
 }
 
 .terminal-back-btn .back-arrow {
-    font-size: 16px;
     color: var(--thermal-red, #ff3300);
     transition: transform 0.3s ease;
+    line-height: 1;
 }
 
 .terminal-back-btn:hover .back-arrow {
     transform: translateX(-4px);
-}
-
-.terminal-back-btn .back-text {
-    opacity: 0.9;
 }
 
 /* CRT Scanline Overlay */
@@ -2399,6 +2394,7 @@ body.scroll-enabled {
 .terminal-container {
     display: grid;
     grid-template-columns: 120px 1fr;
+    grid-template-rows: auto 1fr;
     gap: 1px;
     height: 100vh;
     background-color: #222;
@@ -2406,6 +2402,8 @@ body.scroll-enabled {
 
 /* Sidebar Rail */
 .terminal-sidebar {
+    grid-column: 1;
+    grid-row: 2;
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -2475,6 +2473,8 @@ body.scroll-enabled {
 
 /* Dashboard Grid */
 .terminal-dashboard-grid {
+    grid-column: 2;
+    grid-row: 1 / -1;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: auto 1fr;

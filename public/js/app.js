@@ -814,8 +814,14 @@ function setupLogoutButton() {
             });
             
             if (response.ok) {
-                // Reload page to clear session
-                window.location.reload();
+                // Close terminal first
+                const terminalSection = document.getElementById('terminal-section');
+                if (terminalSection) {
+                    terminalSection.style.display = 'none';
+                    terminalSection.classList.remove('active');
+                }
+                // Redirect to garage door login screen
+                window.location.href = '/';
             } else {
                 // Fallback to GET logout
                 window.location.href = '/auth/logout';
