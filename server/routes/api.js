@@ -144,11 +144,19 @@ router.get('/cars/:id', async (req, res) => {
 });
 
 // @route   GET /api/contractor/assets
-// @desc    Get all assets for Contractor (HOUSE VAULT - all cars regardless of listed status)
+// @desc    Get House Vault assets for Contractor (cars where owner is null - belonging to "The House")
 router.get('/contractor/assets', ensureContractor, async (req, res) => {
     try {
-        // Return ALL cars (contractor can see everything)
-        const cars = await Car.find().sort({ make: 1, model: 1 });
+        // Return only cars where owner is null or doesn't exist (belonging to "The House")
+        // MongoDB query: owner is null OR owner field doesn't exist
+        const cars = await Car.find({ 
+            $or: [
+                { owner: null },
+                { owner: { $exists: false } }
+            ]
+        }).sort({ make: 1, model: 1 });
+        
+        console.log(`House Vault: Found ${cars.length} assets`);
         res.json(cars);
     } catch (err) {
         console.error('Contractor assets fetch error:', err);

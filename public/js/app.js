@@ -388,6 +388,7 @@ async function initTerminal() {
         
         // Load garage/assets from API
         if (Array.isArray(garageData)) {
+            console.log(`Loaded ${garageData.length} assets for ${userRole === 'contractor' ? 'House Vault' : 'user garage'}`);
             userGarage = garageData.map(car => ({
                 ref: car._id || car.id,
                 model: `${car.make} ${car.model}`,
@@ -395,9 +396,11 @@ async function initTerminal() {
                 status: car.status || 'SECURE',
                 listed: car.isListed || false,
                 carId: car._id || car.id,
-                isListed: car.isListed || false // Store for button logic
+                isListed: car.isListed || false, // Store for button logic
+                owner: car.owner || null // Store owner for debugging
             }));
         } else {
+            console.warn('Garage data is not an array:', garageData);
             userGarage = [];
         }
         
