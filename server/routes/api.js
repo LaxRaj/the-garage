@@ -128,6 +128,8 @@ router.post('/cars/:id/bid', async (req, res) => {
         car.bids.push(bid._id);
         await car.save();
 
+        console.log(`✅ Bid placed: ${bidder} bid $${amount} on ${car.make} ${car.model}`);
+
         res.json({ 
             success: true, 
             bid: {
@@ -139,8 +141,18 @@ router.post('/cars/:id/bid', async (req, res) => {
             message: 'Bid placed successfully' 
         });
     } catch (err) {
-        console.error('Bid creation error:', err);
-        res.status(500).json({ error: 'Server Error: Could not place bid.' });
+        console.error('❌ Bid creation error:', err);
+        console.error('Error details:', {
+            message: err.message,
+            stack: err.stack,
+            carId: req.params.id,
+            amount: req.body.amount,
+            bidder: req.body.bidder
+        });
+        res.status(500).json({ 
+            error: 'Server Error: Could not place bid.',
+            message: err.message 
+        });
     }
 });
 

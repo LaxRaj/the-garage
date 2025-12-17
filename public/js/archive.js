@@ -231,9 +231,19 @@ async function handleActionClick() {
 
 async function handlePlaceBid(car) {
     try {
-        // Get user alias for bidder
+        // Check if user is logged in first
         const userResponse = await fetch('/auth/status');
+        if (!userResponse.ok) {
+            alert('Please log in to place a bid');
+            return;
+        }
+        
         const userData = await userResponse.json();
+        if (!userData.loggedIn) {
+            alert('Please log in to place a bid');
+            return;
+        }
+        
         const bidderAlias = userData.user?.displayName || 'ANONYMOUS';
         
         // Get current bid
@@ -269,29 +279,51 @@ async function handlePlaceBid(car) {
         }
         
         // Submit bid to API
-        const response = await fetch(`/api/cars/${car._id || car.id}/bid`, {
+        const carId = car._id || car.id;
+        if (!carId) {
+            alert('Error: Car ID not found');
+            return;
+        }
+        
+        console.log('Submitting bid:', { carId, amount: bidAmount, bidder: bidderAlias });
+        
+        const response = await fetch(`/api/cars/${carId}/bid`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include', // Include cookies for session
             body: JSON.stringify({
                 amount: bidAmount,
                 bidder: bidderAlias
             })
         });
         
+        console.log('Bid response status:', response.status);
+        
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to place bid');
+            let errorMessage = 'Failed to place bid';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorData.message || errorMessage;
+                console.error('Bid error response:', errorData);
+            } catch (e) {
+                // If response is not JSON, get text
+                const text = await response.text();
+                console.error('Bid error text:', text);
+                errorMessage = text || `HTTP ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
+        console.log('Bid success:', data);
         
         // Update car's current bid locally
         car.currentBid = bidAmount;
         
         // Refresh bid history
-        await fetchBidHistory(car._id || car.id);
+        await fetchBidHistory(carId);
         
         // Update showroom display
         updateShowroom(currentIndex);
