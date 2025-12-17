@@ -493,8 +493,9 @@ function renderGarage() {
             <td>${asset.model}</td>
             <td>${asset.value}</td>
             <td class="${statusClass}">${statusText}</td>
-            <td>
+            <td style="display: flex; gap: 0.5rem; align-items: center;">
                 <button class="${buttonClass}" data-ref="${asset.ref}" data-car-id="${asset.carId || asset.ref}">${buttonText}</button>
+                <button class="deploy-btn view-asset-btn" data-car-id="${asset.carId || asset.ref}" style="border-color: #555; color: #888; font-size: 0.6rem; padding: 0.3rem 0.6rem;">VIEW_ASSET</button>
             </td>
         `;
         
@@ -512,11 +513,22 @@ function renderGarage() {
         );
         
         // Setup deploy button click handler
-        const deployBtn = row.querySelector('.deploy-btn');
+        const deployBtn = row.querySelector('.deploy-btn.deploy, .deploy-btn.recall');
         if (deployBtn) {
-            deployBtn.addEventListener('click', () => {
+            deployBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const carId = deployBtn.dataset.carId || asset.ref;
                 handleDeployToggle(carId, asset.ref);
+            });
+        }
+        
+        // Setup VIEW ASSET button click handler
+        const viewAssetBtn = row.querySelector('.view-asset-btn');
+        if (viewAssetBtn) {
+            viewAssetBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const carId = viewAssetBtn.dataset.carId || asset.ref;
+                await handleViewAsset(carId);
             });
         }
     });
@@ -662,43 +674,108 @@ async function handleDeployToggle(carId, assetRef) {
         
         const data = await response.json();
         
-        // Update local state
+        // Get the new listed status
         const newListedStatus = userRole === 'contractor' ? data.isListed : data.car.isListed;
-        if (asset) {
-            asset.listed = newListedStatus;
-            asset.isListed = newListedStatus;
+        const statusText = newListedStatus ? 'VISIBLE' : 'HIDDEN';
+        
+        // Show alert/toast
+        alert(`ASSET STATUS UPDATED: ${statusText}`);
+        
+        // Re-initialize terminal to refresh the list
+        await initTerminal();
+        
+        // Refresh marketplace grid in background
+        if (typeof initClassifiedGrid === 'function') {
+            initClassifiedGrid();
         }
-        
-        // Re-fetch garage data to ensure consistency
-        let garageResponse;
-        if (userRole === 'contractor') {
-            garageResponse = await fetch('/api/contractor/assets').catch(() => ({ json: () => [] }));
-        } else {
-            garageResponse = await fetch('/api/user/garage').catch(() => ({ json: () => [] }));
-        }
-        
-        const garageData = await garageResponse.json();
-        if (Array.isArray(garageData)) {
-            userGarage = garageData.map(car => ({
-                ref: car._id || car.id,
-                model: `${car.make} ${car.model}`,
-                value: `$${car.price ? (car.price >= 1000000 ? (car.price / 1000000).toFixed(1) + 'M' : (car.price / 1000).toFixed(0) + 'K') : '0'}`,
-                status: car.status || 'SECURE',
-                listed: car.isListed || false,
-                carId: car._id || car.id,
-                isListed: car.isListed || false
-            }));
-        }
-        
-        // Re-render garage to update UI
-        renderGarage();
-        
-        // Show toast notification
-        showToast('MARKET_UPDATED');
         
     } catch (error) {
         console.error('Deploy error:', error);
-        showToast('DEPLOY_FAILED');
+        alert('DEPLOY_FAILED: ' + error.message);
+    }
+}
+
+async function handleViewAsset(carId) {
+    try {
+        // Fetch car data
+        const response = await fetch(`/api/cars/${carId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch car data');
+        }
+        
+        const car = await response.json();
+        
+        // Hide terminal
+        const terminalSection = document.getElementById('terminal-section');
+        if (terminalSection) {
+            terminalSection.style.opacity = '0';
+            terminalSection.style.pointerEvents = 'none';
+            terminalSection.style.display = 'none';
+            terminalSection.classList.remove('active');
+        }
+        
+        // Load car into showroom
+        // Check if garageInventory exists (from archive.js)
+        if (typeof window.garageInventory !== 'undefined' && Array.isArray(window.garageInventory) && window.garageInventory.length > 0) {
+            // Find car index in garageInventory
+            const carIndex = window.garageInventory.findIndex(c => {
+                const cId = c._id || c.id;
+                return cId && cId.toString() === carId.toString();
+            });
+            
+            if (carIndex !== -1 && typeof window.updateShowroom === 'function') {
+                // Update currentIndex and call updateShowroom
+                if (typeof window.currentIndex !== 'undefined') {
+                    window.currentIndex = carIndex;
+                }
+                window.updateShowroom(carIndex);
+            } else {
+                // Add car to inventory if not found
+                window.garageInventory.push(car);
+                if (typeof window.updateShowroom === 'function') {
+                    if (typeof window.currentIndex !== 'undefined') {
+                        window.currentIndex = window.garageInventory.length - 1;
+                    }
+                    window.updateShowroom(window.garageInventory.length - 1);
+                } else if (typeof window.updateSpecOverlay === 'function') {
+                    window.updateSpecOverlay(car);
+                }
+            }
+        } else {
+            // If garageInventory doesn't exist, try to initialize it
+            if (typeof window.initShowroomCarousel === 'function') {
+                await window.initShowroomCarousel();
+                // Wait a bit for inventory to load, then try again
+                setTimeout(() => {
+                    if (typeof window.garageInventory !== 'undefined' && Array.isArray(window.garageInventory)) {
+                        const carIndex = window.garageInventory.findIndex(c => {
+                            const cId = c._id || c.id;
+                            return cId && cId.toString() === carId.toString();
+                        });
+                        if (carIndex !== -1 && typeof window.updateShowroom === 'function') {
+                            if (typeof window.currentIndex !== 'undefined') {
+                                window.currentIndex = carIndex;
+                            }
+                            window.updateShowroom(carIndex);
+                        } else if (typeof window.updateSpecOverlay === 'function') {
+                            window.updateSpecOverlay(car);
+                        }
+                    }
+                }, 500);
+            } else if (typeof window.updateSpecOverlay === 'function') {
+                window.updateSpecOverlay(car);
+            }
+        }
+        
+        // Scroll to showroom section
+        const showroomSection = document.getElementById('showroom-section');
+        if (showroomSection) {
+            showroomSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+    } catch (error) {
+        console.error('View asset error:', error);
+        alert('Failed to load asset: ' + error.message);
     }
 }
 

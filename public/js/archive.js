@@ -3,9 +3,12 @@
 // Creative Developer Implementation
 // ============================================
 
-// Global garage inventory and current index
+// Global garage inventory and current index (exposed to window for cross-module access)
 let garageInventory = [];
 let currentIndex = 0;
+// Expose to window for cross-module access
+window.garageInventory = garageInventory;
+window.currentIndex = currentIndex;
 
 document.addEventListener('DOMContentLoaded', () => {
     initShowroomCarousel();
@@ -23,6 +26,7 @@ async function initShowroomCarousel() {
         const response = await fetch('/api/cars');
         if (response.ok) {
             garageInventory = await response.json();
+            window.garageInventory = garageInventory; // Sync to window
             
             if (garageInventory.length === 0) {
                 console.warn('No cars found in inventory');
@@ -74,6 +78,7 @@ function updateShowroom(index, isInitial = false) {
     
     const previousIndex = currentIndex;
     currentIndex = index;
+    window.currentIndex = currentIndex; // Sync to window
     const car = garageInventory[index];
     
     // Get DOM elements
@@ -143,6 +148,11 @@ function updateShowroom(index, isInitial = false) {
         drawerZerosixty.textContent = '';
     }
     
+    // Fetch and display bid history
+    if (car._id || car.id) {
+        fetchBidHistory(car._id || car.id);
+    }
+    
     // Update button states
     if (prevBtn) {
         prevBtn.disabled = index === 0;
@@ -205,20 +215,92 @@ function updateShowroom(index, isInitial = false) {
     );
 }
 
-function handleActionClick() {
+async function handleActionClick() {
     const car = garageInventory[currentIndex];
     
     if (!car) return;
     
-    if (car.status === 'LIVE_AUCTION') {
-        // Scroll to auction section (Screen 3)
-        const auctionSection = document.getElementById('auction-section');
-        if (auctionSection) {
-            auctionSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+    if (car.status === 'LIVE_AUCTION' || car.isAuction) {
+        // Place Bid - Prompt for amount
+        await handlePlaceBid(car);
     } else {
         // Buy Now - Open Payment Terminal
         openPaymentTerminal(car);
+    }
+}
+
+async function handlePlaceBid(car) {
+    try {
+        // Get user alias for bidder
+        const userResponse = await fetch('/auth/status');
+        const userData = await userResponse.json();
+        const bidderAlias = userData.user?.displayName || 'ANONYMOUS';
+        
+        // Get current bid
+        const currentBid = car.currentBid || car.price || 0;
+        const minBid = currentBid + 1000;
+        
+        // Prompt for bid amount
+        const bidAmountStr = prompt(
+            `PLACE BID\n\n` +
+            `Asset: ${car.make} ${car.model}\n` +
+            `Current Bid: $${currentBid.toLocaleString()}\n` +
+            `Minimum Bid: $${minBid.toLocaleString()}\n\n` +
+            `Enter your bid amount:`
+        );
+        
+        if (!bidAmountStr) return; // User cancelled
+        
+        const bidAmount = parseFloat(bidAmountStr.replace(/[^0-9.]/g, ''));
+        
+        if (isNaN(bidAmount) || bidAmount <= 0) {
+            alert('Invalid bid amount');
+            return;
+        }
+        
+        if (bidAmount <= currentBid) {
+            alert(`Bid must be higher than current bid of $${currentBid.toLocaleString()}`);
+            return;
+        }
+        
+        if (bidAmount < minBid) {
+            alert(`Bid must be at least $${minBid.toLocaleString()}`);
+            return;
+        }
+        
+        // Submit bid to API
+        const response = await fetch(`/api/cars/${car._id || car.id}/bid`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                amount: bidAmount,
+                bidder: bidderAlias
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to place bid');
+        }
+        
+        const data = await response.json();
+        
+        // Update car's current bid locally
+        car.currentBid = bidAmount;
+        
+        // Refresh bid history
+        await fetchBidHistory(car._id || car.id);
+        
+        // Update showroom display
+        updateShowroom(currentIndex);
+        
+        alert(`BID PLACED: $${bidAmount.toLocaleString()}`);
+        
+    } catch (error) {
+        console.error('Place bid error:', error);
+        alert('Failed to place bid: ' + error.message);
     }
 }
 
@@ -460,6 +542,64 @@ function handleAssetAccess(asset, isAuction) {
                 openPaymentTerminal(car);
             }
         }, 800); // Wait for showroom transition to complete
+    }
+}
+
+// Fetch bid history for a car
+async function fetchBidHistory(carId) {
+    const bidHistoryContainer = document.getElementById('bid-history-container');
+    if (!bidHistoryContainer) return;
+    
+    try {
+        const response = await fetch(`/api/cars/${carId}/bids`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch bid history');
+        }
+        
+        const bids = await response.json();
+        
+        // Clear existing content
+        bidHistoryContainer.innerHTML = '';
+        
+        if (bids.length === 0) {
+            bidHistoryContainer.innerHTML = '<div class="bid-item" style="color: #555; font-size: 0.7rem; padding: 0.5rem;">NO_BIDS_YET</div>';
+            return;
+        }
+        
+        // Display last 5 bids
+        bids.forEach((bid, index) => {
+            const bidItem = document.createElement('div');
+            bidItem.className = 'bid-item';
+            
+            const bidDate = new Date(bid.timestamp).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const bidAmount = bid.amount >= 1000000 
+                ? `$${(bid.amount / 1000000).toFixed(1)}M` 
+                : `$${(bid.amount / 1000).toFixed(0)}K`;
+            
+            bidItem.innerHTML = `
+                <span class="bid-bidder">${(bid.bidder || 'ANONYMOUS').toUpperCase()}</span>
+                <span class="bid-amount">${bidAmount}</span>
+                <span class="bid-date">${bidDate}</span>
+            `;
+            
+            bidHistoryContainer.appendChild(bidItem);
+            
+            // Stagger fade-in
+            gsap.fromTo(bidItem,
+                { opacity: 0, x: -20 },
+                { opacity: 1, x: 0, duration: 0.3, delay: index * 0.1 }
+            );
+        });
+        
+    } catch (error) {
+        console.error('Error fetching bid history:', error);
+        bidHistoryContainer.innerHTML = '<div class="bid-item" style="color: #ff3300; font-size: 0.7rem; padding: 0.5rem;">ERROR_LOADING_BIDS</div>';
     }
 }
 
@@ -854,4 +994,11 @@ function closePaymentTerminal() {
         currentPaymentCar = null;
     }
 }
+
+// Expose functions to window for cross-module access
+window.updateShowroom = updateShowroom;
+window.updateSpecOverlay = updateSpecOverlay;
+window.initShowroomCarousel = initShowroomCarousel;
+window.handlePlaceBid = handlePlaceBid;
+window.fetchBidHistory = fetchBidHistory;
 

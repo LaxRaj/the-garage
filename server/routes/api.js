@@ -51,13 +51,13 @@ router.get('/cars/live-auctions', async (req, res) => {
 });
 
 // @route   GET /api/cars/:id/bids
-// @desc    Get all bids for a specific car
+// @desc    Get last 5 bids for a specific car
 router.get('/cars/:id/bids', async (req, res) => {
     try {
         const bids = await Bid.find({ car: req.params.id })
-            .populate('user', 'displayName')
             .sort({ timestamp: -1 })
-            .limit(50);
+            .limit(5)
+            .select('bidder amount timestamp');
         res.json(bids);
     } catch (err) {
         console.error(err);
@@ -65,20 +65,24 @@ router.get('/cars/:id/bids', async (req, res) => {
     }
 });
 
-// @route   POST /api/cars/:id/bids
+// @route   POST /api/cars/:id/bid
 // @desc    Create a new bid for a car
-router.post('/cars/:id/bids', async (req, res) => {
+router.post('/cars/:id/bid', async (req, res) => {
     try {
         // Check if user is authenticated
         if (!req.isAuthenticated()) {
             return res.status(401).json({ error: 'Authentication required' });
         }
 
-        const { amount } = req.body;
+        const { amount, bidder } = req.body;
         const carId = req.params.id;
 
         if (!amount || amount <= 0) {
             return res.status(400).json({ error: 'Invalid bid amount' });
+        }
+
+        if (!bidder || bidder.trim() === '') {
+            return res.status(400).json({ error: 'Bidder alias is required' });
         }
 
         // Get the car
@@ -88,11 +92,17 @@ router.post('/cars/:id/bids', async (req, res) => {
         }
 
         // Check if car is still in live auction
-        if (car.status !== 'LIVE_AUCTION') {
+        if (car.status !== 'LIVE_AUCTION' && !car.isAuction) {
             return res.status(400).json({ error: 'Car is not available for bidding' });
         }
 
-        // Check if bid is higher than current bid
+        // Validation: New bid must be > currentBid
+        if (amount <= car.currentBid) {
+            return res.status(400).json({ 
+                error: `Bid must be higher than current bid of $${car.currentBid.toLocaleString()}` 
+            });
+        }
+
         const minBid = car.currentBid > 0 ? car.currentBid + 1000 : car.price || 1000;
         if (amount < minBid) {
             return res.status(400).json({ 
@@ -104,6 +114,7 @@ router.post('/cars/:id/bids', async (req, res) => {
         const bid = new Bid({
             car: carId,
             user: req.user._id,
+            bidder: bidder.trim(),
             amount: amount
         });
 
@@ -111,15 +122,20 @@ router.post('/cars/:id/bids', async (req, res) => {
 
         // Update car's current bid
         car.currentBid = amount;
+        if (!car.bids) {
+            car.bids = [];
+        }
         car.bids.push(bid._id);
         await car.save();
 
-        // Populate user info for response
-        await bid.populate('user', 'displayName');
-
         res.json({ 
             success: true, 
-            bid: bid,
+            bid: {
+                _id: bid._id,
+                bidder: bid.bidder,
+                amount: bid.amount,
+                timestamp: bid.timestamp
+            },
             message: 'Bid placed successfully' 
         });
     } catch (err) {

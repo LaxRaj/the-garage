@@ -171,16 +171,17 @@ const seedDB = async () => {
         
         // Add sample bids for Ferrari to make it look active (capped at Stripe limit)
         const sampleBids = [
-            { amount: 10000, minutesAgo: 45 },
-            { amount: 450000, minutesAgo: 32 },
-            { amount: 500000, minutesAgo: 18 },
-            { amount: 510000, minutesAgo: 5 }
+            { amount: 10000, minutesAgo: 45, bidder: 'OPERATOR_GHOST' },
+            { amount: 450000, minutesAgo: 32, bidder: 'SHADOW_RUNNER' },
+            { amount: 500000, minutesAgo: 18, bidder: 'NIGHT_CRAWLER' },
+            { amount: 510000, minutesAgo: 5, bidder: 'PHANTOM_BIDDER' }
         ];
         
         for (const bidData of sampleBids) {
             const bid = new Bid({
                 car: ferrari._id,
                 user: testUser._id,
+                bidder: bidData.bidder,
                 amount: bidData.amount,
                 timestamp: new Date(Date.now() - bidData.minutesAgo * 60000)
             });
