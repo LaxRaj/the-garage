@@ -321,8 +321,8 @@ async function initClassifiedGrid() {
         if (classifiedAssets.length > 0) {
             renderAssetCards(classifiedAssets);
         } else {
-            // Show fallback if no cars
-            assetGrid.innerHTML = '<p style="color: #666; text-align: center; grid-column: 1/-1;">No assets available</p>';
+            // Show market offline message if no cars are listed
+            assetGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: #555; font-family: var(--font-tech, "JetBrains Mono", monospace); text-transform: uppercase; letter-spacing: 2px;"><div style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--thermal-red, #ff3300);">NO_ACTIVE_ASSETS</div><div style="font-size: 0.9rem; opacity: 0.7;">MARKET_OFFLINE</div></div>';
         }
     } catch (error) {
         console.error('Error loading classified assets:', error);

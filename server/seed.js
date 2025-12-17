@@ -34,6 +34,8 @@ const dreamCars = [
         status: "LIVE_AUCTION",
         isAuction: true,
         currentBid: 310000,
+        isListed: false, // Hidden from public by default
+        owner: null, // Belongs to "The House"
         specs: { engine: "4.0L Flat-6", hp: "518 hp", zeroSixty: "3.0s" }
     },
     {
@@ -47,6 +49,8 @@ const dreamCars = [
         status: "LIVE_AUCTION",
         isAuction: true,
         currentBid: 245000, // Capped at Stripe limit
+        isListed: false, // Hidden from public by default
+        owner: null, // Belongs to "The House"
         specs: { engine: "2.9L Twin-Turbo V8", hp: "471 hp", zeroSixty: "4.1s" }
     },
     {
@@ -60,6 +64,8 @@ const dreamCars = [
         status: "AVAILABLE",
         isAuction: false, // Buy Now only
         currentBid: 0,
+        isListed: false, // Hidden from public by default
+        owner: null, // Belongs to "The House"
         specs: { engine: "6.1L BMW V12", hp: "618 hp", zeroSixty: "3.2s" }
     },
     {
@@ -73,6 +79,8 @@ const dreamCars = [
         status: "RESERVED",
         isAuction: true,
         currentBid: 680000,
+        isListed: false, // Hidden from public by default
+        owner: null, // Belongs to "The House"
         specs: { engine: "5.2L V12", hp: "449 hp", zeroSixty: "4.7s" }
     },
     {
@@ -86,6 +94,8 @@ const dreamCars = [
         status: "AVAILABLE",
         isAuction: false,
         currentBid: 0, // Capped at Stripe limit
+        isListed: false, // Hidden from public by default
+        owner: null, // Belongs to "The House"
         specs: { engine: "4.0L I-6", hp: "282 HP", zeroSixty: "8.0s" }
     },
     {
@@ -99,6 +109,8 @@ const dreamCars = [
         status: "LIVE_AUCTION",
         isAuction: true,
         currentBid: 999999, // Capped at Stripe limit
+        isListed: false, // Hidden from public by default
+        owner: null, // Belongs to "The House"
         specs: { engine: "3.0L I-6", hp: "215 HP", zeroSixty: "8.8s" }
     },
     {
@@ -112,6 +124,8 @@ const dreamCars = [
         status: "AVAILABLE",
         isAuction: false,
         currentBid: 0,
+        isListed: false, // Hidden from public by default
+        owner: null, // Belongs to "The House"
         specs: { engine: "6.75L V12", hp: "563 HP", zeroSixty: "5.1s" }
     },
     {
@@ -125,6 +139,8 @@ const dreamCars = [
         status: "AVAILABLE",
         isAuction: false,
         currentBid: 0,
+        isListed: false, // Hidden from public by default
+        owner: null, // Belongs to "The House"
         specs: { engine: "3.8L I-6", hp: "265 HP", zeroSixty: "6.9s" }
     }
 ];

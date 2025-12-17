@@ -319,14 +319,12 @@ async function initTerminal() {
     
     try {
         // Fetch user data from API
-        const [userResponse, garageResponse, roleResponse] = await Promise.all([
+        const [userResponse, roleResponse] = await Promise.all([
             fetch('/auth/status'),
-            fetch('/api/user/garage').catch(() => ({ json: () => ({}) })),
             fetch('/api/user/role').catch(() => ({ json: () => ({ role: 'user' }) }))
         ]);
         
         const userStatus = await userResponse.json();
-        const garageData = await garageResponse.json();
         const roleData = await roleResponse.json();
         
         if (!userStatus.loggedIn) {
@@ -337,6 +335,18 @@ async function initTerminal() {
         
         const user = userStatus.user;
         const userRole = roleData.role || 'user';
+        
+        // Fetch garage/assets based on role
+        let garageResponse;
+        if (userRole === 'contractor') {
+            // Contractor sees all assets (HOUSE VAULT)
+            garageResponse = await fetch('/api/contractor/assets').catch(() => ({ json: () => [] }));
+        } else {
+            // Regular users see their owned cars
+            garageResponse = await fetch('/api/user/garage').catch(() => ({ json: () => [] }));
+        }
+        
+        const garageData = await garageResponse.json();
         
         // Populate Profile Module
         const operatorAlias = document.getElementById('operator-alias');
@@ -376,7 +386,7 @@ async function initTerminal() {
             satelliteCoords.textContent = `${lat}°N, ${lon}°W`;
         }
         
-        // Load user's garage from API
+        // Load garage/assets from API
         if (Array.isArray(garageData)) {
             userGarage = garageData.map(car => ({
                 ref: car._id || car.id,
@@ -384,10 +394,19 @@ async function initTerminal() {
                 value: `$${car.price ? (car.price >= 1000000 ? (car.price / 1000000).toFixed(1) + 'M' : (car.price / 1000).toFixed(0) + 'K') : '0'}`,
                 status: car.status || 'SECURE',
                 listed: car.isListed || false,
-                carId: car._id || car.id
+                carId: car._id || car.id,
+                isListed: car.isListed || false // Store for button logic
             }));
         } else {
             userGarage = [];
+        }
+        
+        // Update tab label for contractors
+        if (userRole === 'contractor') {
+            const garageTab = document.querySelector('.tab-btn[data-tab="garage"]');
+            if (garageTab) {
+                garageTab.textContent = 'HOUSE_VAULT';
+            }
         }
         
         // Mock transaction history (replace with API call later)
@@ -462,8 +481,9 @@ function renderGarage() {
         
         const statusClass = asset.listed ? 'status-listed' : 'status-secure';
         const statusText = asset.listed ? 'LIVE_ON_GRID' : 'SECURE';
-        const buttonText = asset.listed ? '[ CANCEL_LISTING ]' : '[ DEPLOY_TO_MARKET ]';
-        const buttonClass = asset.listed ? 'deploy-btn listed' : 'deploy-btn';
+        // Contractor button logic: Yellow for deploy, Red for recall
+        const buttonText = asset.listed ? '[ RECALL_ASSET ]' : '[ DEPLOY_TO_MARKET ]';
+        const buttonClass = asset.listed ? 'deploy-btn recall' : 'deploy-btn deploy';
         
         row.innerHTML = `
             <td class="asset-ref">${asset.ref}</td>
@@ -615,7 +635,17 @@ async function handleDeployToggle(carId, assetRef) {
     const asset = userGarage.find(a => a.ref === assetRef || a.carId === carId);
     
     try {
-        const response = await fetch(`/api/cars/${carId}/deploy`, {
+        // Check user role to determine endpoint
+        const roleResponse = await fetch('/api/user/role').catch(() => ({ json: () => ({ role: 'user' }) }));
+        const roleData = await roleResponse.json();
+        const userRole = roleData.role || 'user';
+        
+        // Use contractor endpoint if user is contractor
+        const endpoint = userRole === 'contractor' 
+            ? `/api/cars/${carId}/toggle-deploy`
+            : `/api/cars/${carId}/deploy`;
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -624,14 +654,37 @@ async function handleDeployToggle(carId, assetRef) {
         
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Failed to deploy');
+            throw new Error(error.error || 'Failed to toggle deploy');
         }
         
         const data = await response.json();
         
         // Update local state
+        const newListedStatus = userRole === 'contractor' ? data.isListed : data.car.isListed;
         if (asset) {
-            asset.listed = data.car.isListed;
+            asset.listed = newListedStatus;
+            asset.isListed = newListedStatus;
+        }
+        
+        // Re-fetch garage data to ensure consistency
+        let garageResponse;
+        if (userRole === 'contractor') {
+            garageResponse = await fetch('/api/contractor/assets').catch(() => ({ json: () => [] }));
+        } else {
+            garageResponse = await fetch('/api/user/garage').catch(() => ({ json: () => [] }));
+        }
+        
+        const garageData = await garageResponse.json();
+        if (Array.isArray(garageData)) {
+            userGarage = garageData.map(car => ({
+                ref: car._id || car.id,
+                model: `${car.make} ${car.model}`,
+                value: `$${car.price ? (car.price >= 1000000 ? (car.price / 1000000).toFixed(1) + 'M' : (car.price / 1000).toFixed(0) + 'K') : '0'}`,
+                status: car.status || 'SECURE',
+                listed: car.isListed || false,
+                carId: car._id || car.id,
+                isListed: car.isListed || false
+            }));
         }
         
         // Re-render garage to update UI

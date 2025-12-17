@@ -2807,6 +2807,32 @@ body.scroll-enabled {
     color: #ffaa00;
 }
 
+.ledger-table .deploy-btn.deploy {
+    border-color: #ffaa00;
+    color: #ffaa00;
+    background: rgba(255, 170, 0, 0.1);
+}
+
+.ledger-table .deploy-btn.deploy:hover {
+    border-color: #ffaa00;
+    color: #ffaa00;
+    background: rgba(255, 170, 0, 0.2);
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+}
+
+.ledger-table .deploy-btn.recall {
+    border-color: var(--thermal-red, #ff3300);
+    color: var(--thermal-red, #ff3300);
+    background: rgba(255, 51, 0, 0.1);
+}
+
+.ledger-table .deploy-btn.recall:hover {
+    border-color: var(--thermal-red, #ff3300);
+    color: var(--thermal-red, #ff3300);
+    background: rgba(255, 51, 0, 0.2);
+    box-shadow: 0 0 10px rgba(255, 51, 0, 0.3);
+}
+
 .logout-btn {
     background: transparent;
     border: 1px solid #222;

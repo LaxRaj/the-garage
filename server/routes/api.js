@@ -5,11 +5,11 @@ const Bid = require('../models/Bid');
 const { ensureAuthenticated, ensureContractor } = require('../middleware/auth');
 
 // @route   GET /api/cars
-// @desc    Get all assets for the Marketplace Grid
+// @desc    Get all assets for the Marketplace Grid (PUBLIC - only listed cars)
 router.get('/cars', async (req, res) => {
     try {
-        // Fetch all cars
-        const cars = await Car.find();
+        // Only return cars that are listed (visible to public)
+        const cars = await Car.find({ isListed: true });
         res.json(cars);
     } catch (err) {
         console.error(err);
@@ -143,7 +143,45 @@ router.get('/cars/:id', async (req, res) => {
     }
 });
 
-// @route   POST /api/cars/:id/deploy
+// @route   GET /api/contractor/assets
+// @desc    Get all assets for Contractor (HOUSE VAULT - all cars regardless of listed status)
+router.get('/contractor/assets', ensureContractor, async (req, res) => {
+    try {
+        // Return ALL cars (contractor can see everything)
+        const cars = await Car.find().sort({ make: 1, model: 1 });
+        res.json(cars);
+    } catch (err) {
+        console.error('Contractor assets fetch error:', err);
+        res.status(500).json({ error: 'Server Error: Could not retrieve contractor assets.' });
+    }
+});
+
+// @route   POST /api/cars/:id/toggle-deploy
+// @desc    Toggle car's isListed status (CONTRACTOR ONLY)
+router.post('/cars/:id/toggle-deploy', ensureContractor, async (req, res) => {
+    try {
+        const car = await Car.findById(req.params.id);
+        if (!car) {
+            return res.status(404).json({ error: 'Car not found' });
+        }
+
+        // Toggle isListed status
+        car.isListed = !car.isListed;
+        await car.save();
+
+        res.json({ 
+            success: true, 
+            car: car,
+            isListed: car.isListed,
+            message: car.isListed ? 'Asset deployed to market' : 'Asset recalled from market'
+        });
+    } catch (err) {
+        console.error('Toggle deploy error:', err);
+        res.status(500).json({ error: 'Server Error: Could not update car listing.' });
+    }
+});
+
+// @route   POST /api/cars/:id/deploy (DEPRECATED - kept for backward compatibility)
 // @desc    Toggle car's isListed status (authenticated users only)
 router.post('/cars/:id/deploy', ensureAuthenticated, async (req, res) => {
     try {
