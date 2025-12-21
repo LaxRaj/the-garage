@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Garage - Secure Payment Terminal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Staatliches&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body class="payment-page">
+    <div class="noise-overlay"></div>
+    
+    <!-- Global Crosshair Cursor -->
+    <div class="global-cursor" id="global-cursor">
+        <div class="cursor-crosshair-h"></div>
+        <div class="cursor-crosshair-v"></div>
+    </div>
+
+    <!-- Payment Layout -->
+    <div class="payment-layout">
+        <!-- Left Column: The Manifest -->
+        <div class="payment-manifest">
+            <div class="manifest-header">
+                <h1>OFFICIAL TRANSFER MANIFEST</h1>
+            </div>
+            
+            <div class="manifest-asset">
+                <img id="manifest-car-image" src="/assets/photo/porsche_911.png" alt="Asset">
+            </div>
+            
+            <div class="manifest-data">
+                <div class="manifest-row">
+                    <span class="manifest-label">ASSET_REF:</span>
+                    <span class="manifest-value" id="manifest-asset-ref">_000000</span>
+                </div>
+                <div class="manifest-row">
+                    <span class="manifest-label">BUYER_ID:</span>
+                    <span class="manifest-value" id="manifest-buyer-id">UNKNOWN</span>
+                </div>
+                <div class="manifest-row">
+                    <span class="manifest-label">AGREED_PRICE:</span>
+                    <span class="manifest-value manifest-price" id="manifest-agreed-price">$0.00</span>
+                </div>
+                <div class="manifest-row">
+                    <span class="manifest-label">STATUS:</span>
+                    <span class="manifest-value manifest-status" id="manifest-status">AWAITING_FUNDS</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: The Secure Terminal -->
+        <div class="payment-terminal">
+            <div class="terminal-header">
+                <h2>SECURE FINANCIAL TERMINAL</h2>
+                <div id="test-mode-indicator" class="test-mode-indicator" style="display: none;">
+                    🧪 TEST MODE // STRIPE TEST CARDS ONLY
+                </div>
+            </div>
+            
+            <!-- Loader -->
+            <div id="payment-loader" class="payment-loader">
+                <div class="loader-spinner"></div>
+                <p class="loader-text">ESTABLISHING ENCRYPTED LINK...</p>
+            </div>
+            
+            <!-- Stripe Payment Element Container -->
+            <div id="payment-element-container" class="payment-element-container" style="display: none;">
+                <div id="payment-element"></div>
+                
+                <button id="authorize-transfer-btn" class="authorize-transfer-btn" disabled>
+                    <span id="authorize-text">AUTHORIZE WIRE TRANSFER</span>
+                    <span id="authorize-loader" class="loader" style="display: none;">PROCESSING...</span>
+                </button>
+            </div>
+            
+            <!-- Payment Status -->
+            <div id="payment-status" class="payment-status"></div>
+            
+            <div class="terminal-footer">
+                <p>2048-BIT ENCRYPTION ACTIVE // MARSHALL_MOTORS_SECURE</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="components/navbar.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+

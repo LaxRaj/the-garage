@@ -1,11 +1,22 @@
 const mongoose = require('mongoose');
 
+const OfferSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    alias: { type: String, required: true }, // User's display name/alias
+    amount: { type: Number, required: true },
+    status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now }
+});
+
 const CarSchema = new mongoose.Schema({
     make: { type: String, required: true }, // e.g., "Porsche"
     model: { type: String, required: true }, // e.g., "911 GT3 RS"
     year: Number,
     description: String,
-    price: Number, // Buy Now Price
+    
+    // Pricing (Private Dealer Model)
+    minPrice: { type: Number, required: true }, // Lowest price dealer might accept (hidden from public)
+    askingPrice: { type: Number, required: true }, // Visible list price
     
     // Image for 2D display (marketplace grid, x-ray scanner)
     image: { type: String, default: '/assets/placeholder.jpg' }, // e.g., "/assets/porsche_911.jpg"
@@ -14,17 +25,14 @@ const CarSchema = new mongoose.Schema({
     modelPath: { type: String, default: '/assets/sls300.glb' }, // e.g., "/assets/porsche.glb"
     
     // Status for marketplace
-    status: { type: String, default: 'AVAILABLE', enum: ['AVAILABLE', 'LIVE_AUCTION', 'RESERVED', 'SOLD'] },
+    status: { type: String, default: 'AVAILABLE', enum: ['AVAILABLE', 'RESERVED', 'SOLD'] },
     
-    // Auction Logic (Screen 3)
-    isAuction: { type: Boolean, default: false },
-    currentBid: { type: Number, default: 0 },
-    bids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bid' }],
+    // Direct Offers System
+    offers: [OfferSchema],
     
     // Marketplace Logic
     isListed: { type: Boolean, default: true }, // Whether car is listed on marketplace (public can see)
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Current owner
-    highestBidder: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // Highest bidder for auctions
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null } // Current owner
 });
 
 module.exports = mongoose.model('Car', CarSchema);

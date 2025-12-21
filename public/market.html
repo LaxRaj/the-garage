@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Garage - Market</title>
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Grotesk:wght@300;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Staatliches&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </head>
 <body class="market-page">
@@ -18,13 +18,18 @@
     </div>
 
     <!-- Market Page: Grid and Auctions -->
-    <div id="market-section" class="market-page">
+    <div id="market-section" class="market-section">
+        <!-- Header: Ticker -->
         <div class="market-header">
-            <h2>CLASSIFIED_ASSETS</h2>
-            <span>[SECURE_CONNECTION]</span>
+            <h1 class="market-title">LIVE_ACQUISITION_FEED</h1>
+            <div class="market-filters">
+                <button class="filter-btn active" data-filter="all">[ ALL ]</button>
+                <button class="filter-btn" data-filter="buynow">[ BUY_NOW ]</button>
+            </div>
         </div>
     
-        <div class="asset-grid" id="asset-grid">
+        <!-- Grid Container -->
+        <div class="market-grid" id="market-grid">
             <!-- Cards will be populated by JavaScript -->
         </div>
     </div>

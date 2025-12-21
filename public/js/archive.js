@@ -10,19 +10,19 @@ let currentIndex = 0;
 window.garageInventory = garageInventory;
 window.currentIndex = currentIndex;
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Only initialize if on showroom or market page
-    const currentPath = window.location.pathname;
-    if (currentPath === '/showroom') {
-        initShowroomCarousel();
-        initXRayScanner();
-    }
-    if (currentPath === '/market') {
-        initClassifiedGrid();
-    }
-    // Stripe payment can be initialized on demand
-    // initStripePayment();
-});
+// Don't auto-initialize here - let app.js handle it
+// This prevents double initialization and timing issues
+// document.addEventListener('DOMContentLoaded', () => {
+//     // Only initialize if on showroom or market page
+//     const currentPath = window.location.pathname;
+//     if (currentPath === '/showroom') {
+//         initShowroomCarousel();
+//         initXRayScanner();
+//     }
+//     if (currentPath === '/market') {
+//         initClassifiedGrid();
+//     }
+// });
 
 // Function to load a specific car in showroom (called from profile page)
 window.loadShowroom = async function(carId) {
@@ -56,54 +56,149 @@ window.loadShowroom = async function(carId) {
 // SHOWROOM CAROUSEL LOGIC
 // ============================================
 async function initShowroomCarousel() {
+    console.log('🚗 initShowroomCarousel() called');
+    
     // Fetch all cars from API
     try {
+        console.log('🔄 Fetching cars from /api/cars...');
         const response = await fetch('/api/cars');
         if (response.ok) {
             garageInventory = await response.json();
             window.garageInventory = garageInventory; // Sync to window
+            console.log(`✅ Loaded ${garageInventory.length} cars`);
             
             if (garageInventory.length === 0) {
-                console.warn('No cars found in inventory');
+                console.warn('⚠️ No cars found in inventory');
                 return;
             }
             
             // Initialize UI
+            console.log('🔧 Setting up navigation...');
             setupNavigation();
+            console.log('🔄 Updating showroom with first car...');
             updateShowroom(0, true); // Initial load without animation
+            console.log('✅ Showroom carousel initialized');
+        } else {
+            console.error('❌ Failed to fetch cars. Status:', response.status);
         }
     } catch (error) {
-        console.error('Failed to load garage inventory:', error);
+        console.error('❌ Failed to load garage inventory:', error);
     }
 }
 
 function setupNavigation() {
+    console.log('🔧 setupNavigation() called');
+    
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const actionBtn = document.getElementById('action-btn');
     
+    console.log('   Previous button found:', !!prevBtn);
+    console.log('   Next button found:', !!nextBtn);
+    console.log('   Action button found:', !!actionBtn);
+    
     // Previous button
     if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
+        // Remove existing listeners by cloning
+        const newPrevBtn = prevBtn.cloneNode(true);
+        prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
+        const freshPrevBtn = document.getElementById('prev-btn');
+        
+        freshPrevBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('⬅️ Previous button clicked. Current index:', currentIndex);
             if (currentIndex > 0) {
                 updateShowroom(currentIndex - 1);
+            } else {
+                console.log('   Already at first car');
             }
-        });
+        }, { once: false });
+        
+        // Ensure button is clickable
+        freshPrevBtn.style.pointerEvents = 'auto';
+        freshPrevBtn.style.cursor = 'pointer';
+        
+        console.log('✅ Previous button listener attached');
+    } else {
+        console.error('❌ Previous button not found!');
     }
     
     // Next button
     if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
+        // Remove existing listeners by cloning
+        const newNextBtn = nextBtn.cloneNode(true);
+        nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+        const freshNextBtn = document.getElementById('next-btn');
+        
+        freshNextBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('➡️ Next button clicked. Current index:', currentIndex, 'Total cars:', garageInventory.length);
             if (currentIndex < garageInventory.length - 1) {
                 updateShowroom(currentIndex + 1);
+            } else {
+                console.log('   Already at last car');
             }
-        });
+        }, { once: false });
+        
+        // Ensure button is clickable
+        freshNextBtn.style.pointerEvents = 'auto';
+        freshNextBtn.style.cursor = 'pointer';
+        
+        console.log('✅ Next button listener attached');
+    } else {
+        console.error('❌ Next button not found!');
     }
     
-    // Action button
+    // Action button - attach event listener directly with multiple methods
     if (actionBtn) {
-        actionBtn.addEventListener('click', handleActionClick);
+        console.log('✅ Setting up action button click handler');
+        console.log('   Button element:', actionBtn);
+        console.log('   Button disabled:', actionBtn.disabled);
+        console.log('   Button pointer-events:', window.getComputedStyle(actionBtn).pointerEvents);
+        
+        // Remove any existing listeners by cloning
+        const newBtn = actionBtn.cloneNode(true);
+        actionBtn.parentNode.replaceChild(newBtn, actionBtn);
+        const freshBtn = document.getElementById('action-btn');
+        
+        // Use onclick (most reliable)
+        freshBtn.onclick = function(e) {
+            console.log('🔘 Button clicked via onclick!');
+            e.preventDefault();
+            e.stopPropagation();
+            handleActionClick(e);
+        };
+        
+        // Also addEventListener as backup
+        freshBtn.addEventListener('click', function(e) {
+            console.log('🔘 Button clicked via addEventListener!');
+            e.preventDefault();
+            e.stopPropagation();
+            handleActionClick(e);
+        }, true); // Use capture phase
+        
+        // Also handle mousedown
+        freshBtn.addEventListener('mousedown', function(e) {
+            console.log('🔘 Button mousedown!');
+            e.preventDefault();
+            handleActionClick(e);
+        });
+        
+        // Ensure button is clickable
+        freshBtn.style.pointerEvents = 'auto';
+        freshBtn.style.cursor = 'pointer';
+        freshBtn.setAttribute('tabindex', '0');
+        
+        console.log('✅ Action button listener attached. Button:', freshBtn);
+        console.log('   Final pointer-events:', window.getComputedStyle(freshBtn).pointerEvents);
+    } else {
+        console.error('❌ Action button not found!');
     }
+
+    // Setup offer modal event listeners
+    setupOfferModalListeners();
 }
 
 function updateShowroom(index, isInitial = false) {
@@ -149,9 +244,7 @@ function updateShowroom(index, isInitial = false) {
         const statusDot = stealthStatusIndicator.querySelector('.status-dot');
         if (statusDot) {
             statusDot.classList.remove('active', 'sold');
-            if (car.status === 'LIVE_AUCTION') {
-                statusDot.classList.add('active');
-            } else if (car.status === 'SOLD') {
+            if (car.status === 'SOLD') {
                 statusDot.classList.add('sold');
             }
         }
@@ -166,7 +259,7 @@ function updateShowroom(index, isInitial = false) {
     
     // Update Price
     if (stealthCarPrice) {
-        const price = car.currentBid || car.price || 0;
+        const price = car.askingPrice || car.price || 0;
         const priceFormatted = price >= 1000000 
             ? `$${(price / 1000000).toFixed(1)}M`
             : `$${(price / 1000).toFixed(0)}K`;
@@ -183,10 +276,6 @@ function updateShowroom(index, isInitial = false) {
         drawerZerosixty.textContent = '';
     }
     
-    // Fetch and display bid history
-    if (car._id || car.id) {
-        fetchBidHistory(car._id || car.id);
-    }
     
     // Update button states
     if (prevBtn) {
@@ -198,13 +287,68 @@ function updateShowroom(index, isInitial = false) {
     
     // Update action button based on car status
     if (actionBtn && actionText) {
-        if (car.status === 'LIVE_AUCTION') {
-            actionText.textContent = 'JOIN AUCTION';
-            actionBtn.classList.add('auction-mode');
-        } else {
-            actionText.textContent = 'BUY NOW';
-            actionBtn.classList.remove('auction-mode');
-        }
+        actionBtn.disabled = false;
+        
+        // Fetch latest car data to check offers
+        const carId = car._id || car.id;
+        fetch(`/api/cars/${carId}`)
+            .then(res => res.ok ? res.json() : car)
+            .then(latestCar => {
+                // Update car in inventory with latest data
+                if (latestCar._id) {
+                    garageInventory[currentIndex] = latestCar;
+                }
+                
+                // Check auth status
+                return fetch('/auth/status')
+                    .then(res => res.json())
+                    .then(userData => ({ latestCar, userData }))
+                    .catch(() => ({ latestCar, userData: { loggedIn: false } }));
+            })
+            .then(({ latestCar, userData }) => {
+                if (latestCar.status === 'RESERVED' && userData.loggedIn && userData.user) {
+                    // Check if user has an accepted offer for this car
+                    const userId = userData.user._id || userData.user.id;
+                    const hasAcceptedOffer = latestCar.offers && latestCar.offers.some(offer => {
+                        const offerUserId = offer.userId?._id || offer.userId?.toString() || offer.userId;
+                        return offerUserId && offerUserId.toString() === userId.toString() && offer.status === 'accepted';
+                    });
+                    
+                    if (hasAcceptedOffer) {
+                        actionText.textContent = 'PROCEED_TO_PAYMENT';
+                        actionBtn.disabled = false;
+                        // Re-attach event listener to ensure it works
+                        actionBtn.onclick = handleActionClick;
+                        console.log('✅ Button set to PROCEED_TO_PAYMENT, enabled:', !actionBtn.disabled);
+                    } else {
+                        actionText.textContent = 'RESERVED';
+                        actionBtn.disabled = true;
+                    }
+                } else if (latestCar.status === 'AVAILABLE') {
+                    actionText.textContent = 'INITIATE OFFER';
+                    actionBtn.disabled = false;
+                    // Re-attach event listener to ensure it works
+                    actionBtn.onclick = handleActionClick;
+                    console.log('✅ Button set to INITIATE OFFER, enabled:', !actionBtn.disabled);
+                } else {
+                    actionText.textContent = 'SOLD';
+                    actionBtn.disabled = true;
+                }
+            })
+            .catch(() => {
+                // Default fallback
+                if (car.status === 'AVAILABLE') {
+                    actionText.textContent = 'INITIATE OFFER';
+                    actionBtn.disabled = false;
+                    actionBtn.onclick = handleActionClick;
+                } else {
+                    actionText.textContent = 'BUY NOW';
+                    actionBtn.disabled = false;
+                    actionBtn.onclick = handleActionClick;
+                }
+            });
+        
+        actionBtn.classList.remove('auction-mode');
     }
     
     // For initial load, just set content without animation
@@ -215,18 +359,22 @@ function updateShowroom(index, isInitial = false) {
         return;
     }
     
-    // GSAP Animation: Slide out current, slide in new
+    // GSAP Animation: Smooth slide transition
     const direction = index > previousIndex ? 1 : -1; // 1 = next, -1 = prev
-    const tl = gsap.timeline();
+    const tl = gsap.timeline({ defaults: { ease: "power2.inOut" } });
     
-    // Slide out current car
+    // Prevent rapid clicking during animation
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    
+    // Slide out current car smoothly
     tl.to(carWrapper, {
         x: direction * -100,
         opacity: 0,
-        duration: 0.4,
+        duration: 0.3,
         ease: "power2.in"
     })
-    // Update content
+    // Update content mid-transition
     .call(() => {
         // Update images
         thermalImg.src = car.image || '/assets/photo/porsche_911.png';
@@ -244,132 +392,351 @@ function updateShowroom(index, isInitial = false) {
         {
             x: 0,
             opacity: 1,
-            duration: 0.5,
+            duration: 0.4,
             ease: "power2.out"
         }
-    );
+    )
+    // Re-enable buttons after animation completes
+    .call(() => {
+        if (prevBtn) prevBtn.disabled = index === 0;
+        if (nextBtn) nextBtn.disabled = index === garageInventory.length - 1;
+    });
 }
 
-async function handleActionClick() {
+async function handleActionClick(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    console.log('🔘🔘🔘 Action button clicked! Event:', e);
+    console.trace('Button click stack trace');
+    
     const car = garageInventory[currentIndex];
     
-    if (!car) return;
+    if (!car) {
+        console.error('❌ No car found at current index:', currentIndex);
+        return;
+    }
     
-    if (car.status === 'LIVE_AUCTION' || car.isAuction) {
-        // Place Bid - Prompt for amount
-        await handlePlaceBid(car);
-    } else {
-        // Buy Now - Open Payment Terminal
-        openPaymentTerminal(car);
+    console.log('📦 Current car:', car.make, car.model, 'Status:', car.status);
+    
+    // Fetch latest car data to ensure we have up-to-date offers
+    const carId = car._id || car.id;
+    let latestCar = car;
+    
+    try {
+        console.log('🔄 Fetching latest car data for:', carId);
+        const carResponse = await fetch(`/api/cars/${carId}`);
+        if (carResponse.ok) {
+            latestCar = await carResponse.json();
+            console.log('✅ Latest car data:', latestCar.status, 'Offers:', latestCar.offers?.length || 0);
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch latest car data:', error);
+    }
+    
+    // Check if car is reserved and user has accepted offer
+    try {
+        const userResponse = await fetch('/auth/status').catch(() => ({ json: () => ({ loggedIn: false }) }));
+        const userData = await userResponse.json();
+        console.log('👤 User data:', userData.loggedIn ? 'Logged in' : 'Not logged in', userData.user?._id);
+        
+        if (latestCar.status === 'RESERVED' && userData.loggedIn && userData.user) {
+            // Check if user has an accepted offer for this car
+            const userId = userData.user._id || userData.user.id;
+            const hasAcceptedOffer = latestCar.offers && latestCar.offers.some(offer => {
+                const offerUserId = offer.userId?._id || offer.userId?.toString() || offer.userId;
+                const matches = offerUserId && offerUserId.toString() === userId.toString() && offer.status === 'accepted';
+                if (matches) {
+                    console.log('✅ Found accepted offer:', offer);
+                }
+                return matches;
+            });
+            
+            console.log('🔍 Has accepted offer?', hasAcceptedOffer);
+            
+            if (hasAcceptedOffer) {
+                // Redirect to payment page instead of opening modal
+                console.log('💳 Redirecting to payment page for car:', latestCar._id);
+                window.location.href = `/payment?id=${latestCar._id}`;
+                return;
+            } else {
+                console.log('⚠️ No accepted offer found');
+                alert('This car is reserved. Only the user with an accepted offer can proceed to payment.');
+                return;
+            }
+        }
+        
+        // Open Offer Modal for available cars
+        if (latestCar.status === 'AVAILABLE') {
+            console.log('📝 Opening offer modal...');
+            await openOfferModal(latestCar);
+        } else {
+            // For other statuses (SOLD), show message
+            console.log('❌ Car status:', latestCar.status);
+            alert('This car is no longer available.');
+        }
+    } catch (error) {
+        console.error('❌ Error in handleActionClick:', error);
+        alert('An error occurred. Please try again.');
     }
 }
 
-async function handlePlaceBid(car) {
+// Open Offer Modal
+async function openOfferModal(car) {
     try {
         // Check if user is logged in first
         const userResponse = await fetch('/auth/status');
         if (!userResponse.ok) {
-            alert('Please log in to place a bid');
+            alert('Please log in to make an offer');
             return;
         }
-        
+
         const userData = await userResponse.json();
         if (!userData.loggedIn) {
-            alert('Please log in to place a bid');
+            alert('Please log in to make an offer');
             return;
         }
-        
-        const bidderAlias = userData.user?.displayName || 'ANONYMOUS';
-        
-        // Get current bid
-        const currentBid = car.currentBid || car.price || 0;
-        const minBid = currentBid + 1000;
-        
-        // Prompt for bid amount
-        const bidAmountStr = prompt(
-            `PLACE BID\n\n` +
-            `Asset: ${car.make} ${car.model}\n` +
-            `Current Bid: $${currentBid.toLocaleString()}\n` +
-            `Minimum Bid: $${minBid.toLocaleString()}\n\n` +
-            `Enter your bid amount:`
-        );
-        
-        if (!bidAmountStr) return; // User cancelled
-        
-        const bidAmount = parseFloat(bidAmountStr.replace(/[^0-9.]/g, ''));
-        
-        if (isNaN(bidAmount) || bidAmount <= 0) {
-            alert('Invalid bid amount');
-            return;
-        }
-        
-        if (bidAmount <= currentBid) {
-            alert(`Bid must be higher than current bid of $${currentBid.toLocaleString()}`);
-            return;
-        }
-        
-        if (bidAmount < minBid) {
-            alert(`Bid must be at least $${minBid.toLocaleString()}`);
-            return;
-        }
-        
-        // Submit bid to API
+
+        // Fetch latest car data
         const carId = car._id || car.id;
         if (!carId) {
             alert('Error: Car ID not found');
             return;
         }
-        
-        console.log('Submitting bid:', { carId, amount: bidAmount, bidder: bidderAlias });
-        
-        const response = await fetch(`/api/cars/${carId}/bid`, {
+
+        const carResponse = await fetch(`/api/cars/${carId}`);
+        if (!carResponse.ok) {
+            throw new Error('Failed to fetch car data');
+        }
+        const latestCar = await carResponse.json();
+
+        // Populate modal
+        const modal = document.getElementById('offer-modal');
+        const carNameEl = document.getElementById('offer-terminal-car-name');
+        const askingPriceEl = document.getElementById('offer-asking-price');
+        const offerInput = document.getElementById('offer-amount-input');
+        const messageInput = document.getElementById('offer-message-input');
+        const statusEl = document.getElementById('offer-status');
+        const transmitBtn = document.getElementById('transmit-offer-btn');
+        const transmitText = document.getElementById('transmit-offer-text');
+        const transmitLoader = document.getElementById('transmit-offer-loader');
+
+        if (!modal || !carNameEl || !askingPriceEl || !offerInput) {
+            console.error('Offer modal elements not found');
+            return;
+        }
+
+        // Reset modal state
+        statusEl.classList.remove('show', 'success', 'error');
+        statusEl.textContent = '';
+        transmitBtn.disabled = false;
+        transmitText.style.display = 'inline';
+        transmitLoader.style.display = 'none';
+        offerInput.value = '';
+        if (messageInput) messageInput.value = '';
+
+        // Populate data
+        const askingPrice = latestCar.askingPrice || latestCar.price || 0;
+
+        carNameEl.textContent = `${latestCar.make} ${latestCar.model}`.toUpperCase();
+        askingPriceEl.textContent = `$${askingPrice.toLocaleString()}`;
+
+        // Store car data for submission
+        offerInput.dataset.carId = carId;
+        offerInput.dataset.askingPrice = askingPrice;
+
+        // Show modal
+        modal.classList.add('active');
+
+        // Focus input
+        setTimeout(() => {
+            offerInput.focus();
+        }, 300);
+
+    } catch (error) {
+        console.error('Error opening offer modal:', error);
+        alert('Failed to open offer modal: ' + error.message);
+    }
+}
+
+// Submit Offer
+async function submitOffer() {
+    const offerInput = document.getElementById('offer-amount-input');
+    const messageInput = document.getElementById('offer-message-input');
+    const statusEl = document.getElementById('offer-status');
+    const transmitBtn = document.getElementById('transmit-offer-btn');
+    const transmitText = document.getElementById('transmit-offer-text');
+    const transmitLoader = document.getElementById('transmit-offer-loader');
+
+    if (!offerInput || !transmitBtn) {
+        console.error('Offer submission elements not found');
+        return;
+    }
+
+    try {
+        // Get values
+        const carId = offerInput.dataset.carId;
+        const askingPrice = parseFloat(offerInput.dataset.askingPrice) || 0;
+        const inputValue = offerInput.value.replace(/[^0-9.]/g, '');
+        const offerAmount = parseFloat(inputValue);
+        const message = messageInput ? messageInput.value.trim() : '';
+
+        // Validate input
+        if (!offerAmount || offerAmount <= 0) {
+            statusEl.textContent = 'INVALID_OFFER_AMOUNT';
+            statusEl.classList.add('show', 'error');
+            statusEl.classList.remove('success');
+            return;
+        }
+
+        // Get user data
+        const userResponse = await fetch('/auth/status');
+        if (!userResponse.ok) {
+            throw new Error('Authentication required');
+        }
+        const userData = await userResponse.json();
+        if (!userData.loggedIn) {
+            throw new Error('Please log in to submit an offer');
+        }
+        const alias = userData.user?.displayName || 'ANONYMOUS';
+
+        // Disable button and show loading
+        transmitBtn.disabled = true;
+        transmitText.style.display = 'none';
+        transmitLoader.style.display = 'inline';
+
+        // Clear status
+        statusEl.classList.remove('show', 'error', 'success');
+
+        // Submit offer
+        console.log('Submitting offer:', { carId, amount: offerAmount, alias, message });
+
+        const response = await fetch(`/api/cars/${carId}/offer`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            credentials: 'include', // Include cookies for session
+            credentials: 'include',
             body: JSON.stringify({
-                amount: bidAmount,
-                bidder: bidderAlias
+                amount: offerAmount,
+                alias: alias,
+                message: message
             })
         });
-        
-        console.log('Bid response status:', response.status);
-        
+
+        console.log('Offer response status:', response.status);
+
         if (!response.ok) {
-            let errorMessage = 'Failed to place bid';
+            let errorMessage = 'Failed to submit offer';
             try {
                 const errorData = await response.json();
                 errorMessage = errorData.error || errorData.message || errorMessage;
-                console.error('Bid error response:', errorData);
+                console.error('Offer error response:', errorData);
             } catch (e) {
-                // If response is not JSON, get text
                 const text = await response.text();
-                console.error('Bid error text:', text);
+                console.error('Offer error text:', text);
                 errorMessage = text || `HTTP ${response.status}: ${response.statusText}`;
             }
-            throw new Error(errorMessage);
+
+            statusEl.textContent = `ERROR: ${errorMessage}`;
+            statusEl.classList.add('show', 'error');
+            statusEl.classList.remove('success');
+
+            // Re-enable button
+            transmitBtn.disabled = false;
+            transmitText.style.display = 'inline';
+            transmitLoader.style.display = 'none';
+            return;
         }
-        
+
         const data = await response.json();
-        console.log('Bid success:', data);
-        
-        // Update car's current bid locally
-        car.currentBid = bidAmount;
-        
-        // Refresh bid history
-        await fetchBidHistory(carId);
-        
-        // Update showroom display
-        updateShowroom(currentIndex);
-        
-        alert(`BID PLACED: $${bidAmount.toLocaleString()}`);
-        
+        console.log('Offer success:', data);
+
+        // Show success message
+        statusEl.textContent = 'OFFER_TRANSMITTED_SUCCESSFULLY';
+        statusEl.classList.add('show', 'success');
+        statusEl.classList.remove('error');
+
+        // Wait 2 seconds, then close modal
+        setTimeout(() => {
+            const modal = document.getElementById('offer-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }, 2000);
+
     } catch (error) {
-        console.error('Place bid error:', error);
-        alert('Failed to place bid: ' + error.message);
+        console.error('Offer submission error:', error);
+        statusEl.textContent = `ERROR: ${error.message}`;
+        statusEl.classList.add('show', 'error');
+        statusEl.classList.remove('success');
+
+        // Re-enable button
+        transmitBtn.disabled = false;
+        transmitText.style.display = 'inline';
+        transmitLoader.style.display = 'none';
     }
 }
+
+// Setup offer modal event listeners
+function setupOfferModalListeners() {
+    // Close button
+    const closeBtn = document.getElementById('close-offer-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            const modal = document.getElementById('offer-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        });
+    }
+
+    // Transmit button
+    const transmitBtn = document.getElementById('transmit-offer-btn');
+    if (transmitBtn) {
+        transmitBtn.addEventListener('click', submitOffer);
+    }
+
+    // Close modal when clicking overlay
+    const modal = document.getElementById('offer-modal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const offerModal = document.getElementById('offer-modal');
+            const paymentModal = document.getElementById('payment-modal');
+            if (offerModal && offerModal.classList.contains('active')) {
+                offerModal.classList.remove('active');
+            }
+            if (paymentModal && paymentModal.classList.contains('active')) {
+                paymentModal.classList.remove('active');
+            }
+        }
+    });
+
+    // Enter key on input
+    const offerInput = document.getElementById('offer-amount-input');
+    if (offerInput) {
+        offerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (transmitBtn && !transmitBtn.disabled) {
+                    submitOffer();
+                }
+            }
+        });
+    }
+}
+
 
 // ============================================
 // X-RAY SCANNER LOGIC
@@ -437,8 +804,12 @@ async function initXRayScanner() {
 // ============================================
 // CLASSIFIED GRID - FETCH FROM API
 // ============================================
+// Global filter state
+let currentFilter = 'all';
+let allCars = [];
+
 async function initClassifiedGrid() {
-    const assetGrid = document.getElementById('asset-grid');
+    const assetGrid = document.getElementById('market-grid') || document.getElementById('asset-grid');
     
     if (!assetGrid) {
         console.warn('Asset grid not found');
@@ -453,30 +824,65 @@ async function initClassifiedGrid() {
         }
         
         const cars = await response.json();
+        allCars = cars; // Store for filtering
         
-        // Transform API data to match card structure
-        const classifiedAssets = cars.map((car, index) => ({
-            code: `REF_${String(index + 1).padStart(3, '0')}`,
-            name: `${car.make.toUpperCase()} ${car.model.toUpperCase()}`,
-            image: car.image || getPlaceholderImage(car.make),
-            price: formatPrice(car.price || car.currentBid || 0),
-            status: car.status || 'AVAILABLE',
-            year: car.year || 'N/A',
-            _id: car._id,
-            car: car // Store full car object for later use
-        }));
+        // Setup filter buttons
+        setupMarketFilters();
         
-        // Render cards
-        if (classifiedAssets.length > 0) {
-            renderAssetCards(classifiedAssets);
-        } else {
-            // Show market offline message if no cars are listed
-            assetGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: #555; font-family: var(--font-tech, "JetBrains Mono", monospace); text-transform: uppercase; letter-spacing: 2px;"><div style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--thermal-red, #ff3300);">NO_ACTIVE_ASSETS</div><div style="font-size: 0.9rem; opacity: 0.7;">MARKET_OFFLINE</div></div>';
-        }
+        // Render cards with current filter
+        renderFilteredCards();
+        
     } catch (error) {
         console.error('Error loading classified assets:', error);
-        // Fallback to sample data if API fails
-        renderFallbackCards();
+        assetGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: #555; font-family: var(--font-tech, "JetBrains Mono", monospace); text-transform: uppercase; letter-spacing: 2px;"><div style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--thermal-red, #ff3300);">NO_ACTIVE_ASSETS</div><div style="font-size: 0.9rem; opacity: 0.7;">MARKET_OFFLINE</div></div>';
+    }
+}
+
+function setupMarketFilters() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active state
+            filterButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Update filter
+            currentFilter = btn.dataset.filter;
+            
+            // Re-render cards
+            renderFilteredCards();
+        });
+    });
+}
+
+function renderFilteredCards() {
+    const assetGrid = document.getElementById('market-grid') || document.getElementById('asset-grid');
+    if (!assetGrid) return;
+    
+    // Filter cars based on current filter
+    let filteredCars = allCars;
+    
+    if (currentFilter === 'buynow') {
+        filteredCars = allCars.filter(car => car.status === 'AVAILABLE');
+    }
+    
+    // Transform to card data
+    const classifiedAssets = filteredCars.map((car, index) => ({
+        code: `REF_${String(index + 1).padStart(3, '0')}`,
+        name: `${car.make.toUpperCase()} ${car.model.toUpperCase()}`,
+        image: car.image || getPlaceholderImage(car.make),
+        price: formatPrice(car.askingPrice || car.price || 0),
+        status: car.status || 'AVAILABLE',
+        year: car.year || 'N/A',
+        _id: car._id,
+        car: car // Store full car object for later use
+    }));
+    
+    // Render cards
+    if (classifiedAssets.length > 0) {
+        renderAssetCards(classifiedAssets);
+    } else {
+        assetGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: #555; font-family: var(--font-tech, "JetBrains Mono", monospace); text-transform: uppercase; letter-spacing: 2px;"><div style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--thermal-red, #ff3300);">NO_ASSETS_FOUND</div><div style="font-size: 0.9rem; opacity: 0.7;">TRY_SELECTING_DIFFERENT_FILTER</div></div>';
     }
 }
 
@@ -500,7 +906,7 @@ function renderFallbackCards() {
             name: 'PORSCHE 911 GT3 RS',
             image: getPlaceholderImage('Porsche'),
             price: '$215,000',
-            status: 'LIVE_AUCTION',
+            status: 'AVAILABLE',
             year: '2023'
         },
         {
@@ -516,7 +922,7 @@ function renderFallbackCards() {
 }
 
 function renderAssetCards(assets) {
-    const assetGrid = document.getElementById('asset-grid');
+    const assetGrid = document.getElementById('market-grid') || document.getElementById('asset-grid');
     
     if (!assetGrid) return;
     
@@ -537,47 +943,55 @@ function createAssetCard(asset) {
     // Handle image errors with fallback
     const imgSrc = asset.image || getPlaceholderImage(asset.name.split(' ')[0]);
     
-    // Determine if this is an auction car
-    const isAuction = asset.car?.isAuction || asset.isAuction || asset.status === 'LIVE_AUCTION';
-    const buttonClass = isAuction ? 'btn-card auction' : 'btn-card buy';
-    const buttonText = isAuction ? '● PLACE_BID' : 'ACQUIRE_ASSET >';
-    
-    article.innerHTML = `
-        <div class="card-image">
-            <img src="${imgSrc}" alt="${asset.name}" loading="lazy" onerror="this.src='${getPlaceholderImage(asset.name.split(' ')[0])}'">
+    // Status chip content
+    const statusChipHTML = `
+        <div class="status-chip secure">
+            SECURE_STOCK
         </div>
-        <div class="card-info">
-            <div class="card-header">
-                <span class="code">${asset.code}</span>
-                <span class="status">${asset.status}</span>
+    `;
+    
+    // Price display
+    const priceDisplay = asset.price;
+    
+    // Build card HTML with new structure
+    article.innerHTML = `
+        <!-- Layer 1: Image -->
+        <img src="${imgSrc}" alt="${asset.name}" class="asset-card-image" loading="lazy" onerror="this.src='${getPlaceholderImage(asset.name.split(' ')[0])}'">
+        
+        <!-- Layer 2: Status Chip (Top-Left) -->
+        ${statusChipHTML}
+        
+        <!-- Layer 3: Data Plate (Bottom - Slides Up on Hover) -->
+        <div class="data-plate">
+            <div class="data-plate-row">
+                <div class="data-plate-make-model">${asset.name}</div>
             </div>
-            <h3>${asset.name}</h3>
-            <div class="card-footer">
-                <span class="price">${asset.price}</span>
-                <button class="${buttonClass}" data-code="${asset.code}">${buttonText}</button>
+            <div class="data-plate-row">
+                <div class="data-plate-price">${priceDisplay}</div>
+            </div>
+            <div class="data-plate-row">
+                <a href="#" class="data-plate-button">VIEW_INTEL</a>
             </div>
         </div>
     `;
     
-    // Add click handler for button
-    const btn = article.querySelector('.btn-card');
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleAssetAccess(asset, isAuction);
-    });
-    
-    // Card click handler (only if not clicking button)
+    // Click handler: Redirect to showroom
     article.addEventListener('click', (e) => {
-        // Don't trigger if clicking the button
-        if (!e.target.closest('.btn-card')) {
-            handleAssetAccess(asset, isAuction);
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const carId = asset._id || asset.car?._id;
+        if (carId) {
+            window.location.href = `/showroom?id=${carId}`;
+        } else {
+            console.error('Car ID not found for asset:', asset);
         }
     });
     
     return article;
 }
 
-function handleAssetAccess(asset, isAuction) {
+function handleAssetAccess(asset) {
     if (!asset.car) {
         console.warn('Asset missing car data:', asset.code);
         return;
@@ -602,14 +1016,14 @@ function handleAssetAccess(asset, isAuction) {
     // Update showroom to display this car
     updateShowroom(carIndex);
     
-    // If Buy Now (not auction), open payment terminal after transition
-    if (!isAuction) {
-        setTimeout(() => {
-            if (typeof openPaymentTerminal === 'function') {
-                openPaymentTerminal(car);
-            }
-        }, 800); // Wait for showroom transition to complete
-    }
+    // Open payment terminal after transition
+    setTimeout(() => {
+        // Redirect to payment page instead of opening modal
+        if (car && car._id) {
+            console.log('💳 Redirecting to payment page for car:', car._id);
+            window.location.href = `/payment?id=${car._id}`;
+        }
+    }, 800); // Wait for showroom transition to complete
 }
 
 // Fetch bid history for a car
@@ -707,9 +1121,7 @@ function updateSpecOverlay(car) {
         const statusDot = stealthStatusIndicator.querySelector('.status-dot');
         if (statusDot) {
             statusDot.classList.remove('active', 'sold');
-            if (car.status === 'LIVE_AUCTION') {
-                statusDot.classList.add('active');
-            } else if (car.status === 'SOLD') {
+            if (car.status === 'SOLD') {
                 statusDot.classList.add('sold');
             }
         }
@@ -724,7 +1136,7 @@ function updateSpecOverlay(car) {
     
     // Update Price
     if (stealthCarPrice) {
-        const price = car.currentBid || car.price || 0;
+        const price = car.askingPrice || car.price || 0;
         const priceFormatted = price >= 1000000 
             ? `$${(price / 1000000).toFixed(1)}M`
             : price >= 1000
@@ -755,36 +1167,60 @@ let currentPaymentCar = null;
 
 // Initialize Stripe Payment Terminal
 async function initStripePayment() {
+    console.log('🔧 initStripePayment() called');
+    
     // Check if Stripe is loaded
     if (typeof Stripe === 'undefined') {
-        console.warn('Stripe.js not loaded. Payment functionality will not work.');
-        return;
+        console.error('❌ Stripe.js library not loaded. Make sure <script src="https://js.stripe.com/v3/"></script> is in the HTML.');
+        return false;
     }
+    
+    console.log('✅ Stripe.js library is loaded');
     
     // Fetch publishable key from server
     try {
+        console.log('🔄 Fetching Stripe config from /api/payment/config...');
         const response = await fetch('/api/payment/config');
+        
         if (!response.ok) {
-            throw new Error('Failed to fetch Stripe config');
+            console.error('❌ Failed to fetch Stripe config. Status:', response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('   Response:', errorText);
+            throw new Error(`Failed to fetch Stripe config: ${response.status} ${response.statusText}`);
         }
-        const { publishableKey, testMode } = await response.json();
+        
+        const config = await response.json();
+        console.log('✅ Received Stripe config:', { 
+            hasKey: !!config.publishableKey, 
+            testMode: config.testMode,
+            keyPrefix: config.publishableKey ? config.publishableKey.substring(0, 10) + '...' : 'none'
+        });
+        
+        const { publishableKey, testMode } = config;
         
         if (!publishableKey) {
-            console.error('Stripe publishable key not found');
-            return;
+            console.error('❌ Stripe publishable key not found in server response');
+            console.error('   Make sure STRIPE_PUBLISHABLE_KEY is set in server .env file');
+            return false;
         }
         
         // Initialize Stripe with the publishable key from server
+        console.log('🔄 Initializing Stripe with publishable key...');
         stripe = Stripe(publishableKey);
+        console.log('✅ Stripe object created:', stripe ? 'Success' : 'Failed');
         
         if (testMode) {
             console.log('✅ Stripe initialized successfully (TEST MODE)');
         } else {
             console.log('✅ Stripe initialized successfully (LIVE MODE)');
         }
+        
+        return true;
     } catch (error) {
-        console.error('Failed to initialize Stripe:', error);
-        return;
+        console.error('❌ Failed to initialize Stripe:', error);
+        console.error('   Error details:', error.message);
+        stripe = null;
+        return false;
     }
     
     // Setup close button
@@ -805,14 +1241,83 @@ async function initStripePayment() {
 }
 
 async function openPaymentTerminal(car) {
-    if (!car || !stripe) {
-        console.error('Car data or Stripe not available');
+    console.log('🚀 openPaymentTerminal called with car:', car);
+    
+    if (!car) {
+        console.error('❌ Car data not available');
+        alert('Car data not available. Please try again.');
         return;
     }
     
-    currentPaymentCar = car;
+    console.log('✅ Car data available:', car.make, car.model);
     
-    const paymentModal = document.querySelector('.payment-terminal-overlay');
+    // Initialize Stripe if not already initialized
+    if (!stripe) {
+        console.log('🔄 Stripe not initialized, initializing now...');
+        console.log('   Stripe library available?', typeof Stripe !== 'undefined');
+        
+        try {
+            await initStripePayment();
+            console.log('   Stripe initialization attempt completed');
+            console.log('   Stripe object after init:', stripe ? 'Initialized' : 'Still null');
+        } catch (error) {
+            console.error('❌ Error during Stripe initialization:', error);
+        }
+        
+        // Check again after initialization
+        if (!stripe) {
+            console.error('❌ Failed to initialize Stripe - stripe is still null');
+            console.error('   This might be due to:');
+            console.error('   1. Stripe.js library not loaded');
+            console.error('   2. /api/payment/config endpoint failing');
+            console.error('   3. Missing STRIPE_PUBLISHABLE_KEY in server .env');
+            alert('Payment system is not available. Please check your connection and try again.\n\nCheck browser console for details.');
+            return;
+        }
+    } else {
+        console.log('✅ Stripe already initialized');
+    }
+    
+    // Fetch latest car data to ensure we have up-to-date offers
+    const carId = car._id || car.id;
+    let latestCar = car;
+    
+    try {
+        const carResponse = await fetch(`/api/cars/${carId}`);
+        if (carResponse.ok) {
+            latestCar = await carResponse.json();
+        }
+    } catch (error) {
+        console.error('Failed to fetch latest car data:', error);
+    }
+    
+    // Check if car is reserved - only allow payment if user has accepted offer
+    if (latestCar.status === 'RESERVED') {
+        const userResponse = await fetch('/auth/status').catch(() => ({ json: () => ({ loggedIn: false }) }));
+        const userData = await userResponse.json();
+        
+        if (!userData.loggedIn || !userData.user) {
+            alert('Please log in to access payment terminal');
+            return;
+        }
+        
+        // Check if user has an accepted offer for this car
+        const userId = userData.user._id || userData.user.id;
+        const hasAcceptedOffer = latestCar.offers && latestCar.offers.some(offer => {
+            const offerUserId = offer.userId?._id || offer.userId?.toString() || offer.userId;
+            return offerUserId && offerUserId.toString() === userId.toString() && offer.status === 'accepted';
+        });
+        
+        if (!hasAcceptedOffer) {
+            alert('This car is reserved. Only the user with an accepted offer can proceed to payment.');
+            return;
+        }
+    }
+    
+    // Use latest car data for payment
+    currentPaymentCar = latestCar;
+    
+    const paymentModal = document.querySelector('.payment-terminal-overlay') || document.getElementById('payment-modal');
     const terminalCarName = document.getElementById('terminal-car-name');
     const terminalAmount = document.getElementById('terminal-amount');
     const cardElementContainer = document.getElementById('card-element');
@@ -821,17 +1326,27 @@ async function openPaymentTerminal(car) {
     const submitLoader = document.getElementById('submit-loader');
     const paymentStatus = document.getElementById('payment-status');
     
-    if (!paymentModal || !cardElementContainer) {
-        console.error('Payment modal elements not found');
+    if (!paymentModal) {
+        console.error('❌ Payment modal not found in DOM');
+        alert('Payment modal not found. Please refresh the page.');
         return;
     }
     
-    // Update car name and amount
-    if (terminalCarName) {
-        terminalCarName.textContent = `${car.make.toUpperCase()} ${car.model.toUpperCase()}`;
+    if (!cardElementContainer) {
+        console.error('❌ Card element container not found');
+        alert('Payment form not found. Please refresh the page.');
+        return;
     }
     
-    const carPrice = car.currentBid || car.price || 0;
+    console.log('✅ Payment modal found:', paymentModal);
+    console.log('✅ Card element container found:', cardElementContainer);
+    
+    // Update car name and amount
+    if (terminalCarName) {
+        terminalCarName.textContent = `${latestCar.make.toUpperCase()} ${latestCar.model.toUpperCase()}`;
+    }
+    
+    const carPrice = latestCar.askingPrice || latestCar.price || 0;
     if (terminalAmount) {
         terminalAmount.textContent = `$${carPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
@@ -866,7 +1381,7 @@ async function openPaymentTerminal(car) {
     // Setup form submission handler
     submitBtn.onclick = async (e) => {
         e.preventDefault();
-        await handlePaymentFlow(car, submitBtn, submitText, submitLoader, paymentStatus);
+        await handlePaymentFlow(latestCar, submitBtn, submitText, submitLoader, paymentStatus);
     };
 }
 
@@ -1066,6 +1581,9 @@ function closePaymentTerminal() {
 window.updateShowroom = updateShowroom;
 window.updateSpecOverlay = updateSpecOverlay;
 window.initShowroomCarousel = initShowroomCarousel;
-window.handlePlaceBid = handlePlaceBid;
-window.fetchBidHistory = fetchBidHistory;
+window.initXRayScanner = initXRayScanner;
+window.setupNavigation = setupNavigation;
+window.loadShowroom = loadShowroom;
+window.initXRayScanner = initXRayScanner;
+window.setupNavigation = setupNavigation;
 

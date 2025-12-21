@@ -11,7 +11,7 @@ let scene, camera, renderer, controls;
 let carModel = null;
 
 function initShowroom() {
-    const canvas = document.querySelector('#webgl-canvas');
+const canvas = document.querySelector('#webgl-canvas');
     if (!canvas) {
         console.error('Canvas element not found');
         return;
@@ -47,16 +47,16 @@ function initShowroom() {
         powerPreference: "high-performance"
     });
     
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     
     // Realistic color grading
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     
     // Soft shadows
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
     // Dark background
     renderer.setClearColor(0x050505, 1);
@@ -65,18 +65,18 @@ function initShowroom() {
     // FLOOR - Dark Reflective Asphalt/Concrete
     // ============================================
     const floorGeometry = new THREE.PlaneGeometry(100, 100, 1, 1);
-    const floorMaterial = new THREE.MeshStandardMaterial({
+const floorMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x0a0a0a,
         roughness: 0.3, // Slight reflectivity
         metalness: 0.1,
         emissive: 0x000000
-    });
+});
     
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
+const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.rotation.x = -Math.PI / 2;
     floor.position.y = 0;
-    floor.receiveShadow = true;
-    scene.add(floor);
+floor.receiveShadow = true;
+scene.add(floor);
 
     // ============================================
     // DRAMATIC STUDIO LIGHTING
@@ -84,7 +84,7 @@ function initShowroom() {
     
     // Ambient - minimal fill
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
-    scene.add(ambientLight);
+scene.add(ambientLight);
 
     // KEY LIGHT - Strong SpotLight casting shadows (main illumination)
     const keyLight = new THREE.SpotLight(0xffffff, 25);
@@ -130,26 +130,26 @@ function initShowroom() {
     // ============================================
     // CAR MODEL LOADING
     // ============================================
-    const loader = new GLTFLoader();
-    
-    loader.load(
+const loader = new GLTFLoader();
+
+loader.load(
         '/assets/porsche_911.glb',
-        (gltf) => {
+    (gltf) => {
             // SUCCESS: Car model loaded
             carModel = gltf.scene;
             
             // Enable shadows on all meshes
             carModel.traverse((node) => {
-                if (node.isMesh) {
-                    node.castShadow = true;
-                    node.receiveShadow = true;
+            if (node.isMesh) {
+                node.castShadow = true;
+                node.receiveShadow = true;
                     
                     // Enhance material properties for cinematic look
                     if (node.material) {
                         node.material.needsUpdate = true;
                     }
-                }
-            });
+            }
+        });
             
             // Calculate bounding box and center the car
             const box = new THREE.Box3().setFromObject(carModel);
@@ -182,7 +182,7 @@ function initShowroom() {
             const percent = (progress.loaded / progress.total) * 100;
             console.log(`Loading: ${percent.toFixed(0)}%`);
         },
-        (error) => {
+    (error) => {
             // ERROR: Model failed to load - Create glowing red cube placeholder
             console.warn('⚠️ Car model not found. Creating placeholder:', error);
             createPlaceholder();
@@ -194,7 +194,7 @@ function initShowroom() {
     // ============================================
     function createPlaceholder() {
         const geometry = new THREE.BoxGeometry(2, 1, 4);
-        const material = new THREE.MeshStandardMaterial({
+        const material = new THREE.MeshStandardMaterial({ 
             color: 0xff0000,
             roughness: 0.2,
             metalness: 0.8,
@@ -212,9 +212,9 @@ function initShowroom() {
         function animatePlaceholder() {
             placeholder.rotation.y += 0.005;
             requestAnimationFrame(animatePlaceholder);
-        }
+    }
         animatePlaceholder();
-        
+
         carModel = placeholder; // Set reference for controls
     }
 
@@ -224,12 +224,12 @@ function initShowroom() {
     controls = new OrbitControls(camera, renderer.domElement);
     
     // Smooth damping for cinematic feel
-    controls.enableDamping = true;
+controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     
     // Disable zoom to prevent scroll hijacking
-    controls.enableZoom = false;
-    
+controls.enableZoom = false; 
+
     // Limit polar angle to prevent clipping under floor
     controls.minPolarAngle = Math.PI / 6; // ~30 degrees from top
     controls.maxPolarAngle = Math.PI / 2.2; // ~82 degrees (almost horizontal)
@@ -256,18 +256,18 @@ function initShowroom() {
         controls.update();
         
         // Render
-        renderer.render(scene, camera);
-    }
+    renderer.render(scene, camera);
+}
     
-    animate();
+animate();
 
     // ============================================
     // RESPONSIVE HANDLING
     // ============================================
     function handleResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
     }
     
     window.addEventListener('resize', handleResize);

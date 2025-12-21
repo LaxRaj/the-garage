@@ -77,6 +77,20 @@ router.get('/profile', ensurePageAuth, (req, res, next) => {
     });
 });
 
+// 5. PAYMENT (Protected)
+router.get('/payment', ensurePageAuth, (req, res, next) => {
+    console.log('📍 Route hit: GET /payment');
+    const filePath = path.join(publicPath, 'payment.html');
+    console.log('   Sending file:', filePath);
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('❌ Error sending payment.html:', err);
+            next(err);
+        }
+    });
+});
+
+
 // Debug: Log all registered routes when router is created
 setTimeout(() => {
     console.log('📋 Registered page routes:');

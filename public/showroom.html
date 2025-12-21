@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Garage - Showroom</title>
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Grotesk:wght@300;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Staatliches&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
@@ -96,6 +96,65 @@
                     <div id="bid-history-container" class="bid-history-list">
                         <!-- Populated by JavaScript -->
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offer Modal -->
+    <div class="offer-modal-overlay" id="offer-modal">
+        <div class="offer-terminal">
+            <div class="offer-terminal-header">
+                <h2 class="offer-terminal-title">SECURE_TRANSMISSION</h2>
+                <span class="offer-terminal-asset" id="offer-terminal-car-name">[CAR_MODEL]</span>
+            </div>
+            
+            <div class="offer-terminal-body">
+                <!-- Asking Price Display -->
+                <div class="offer-data-section">
+                    <div class="offer-data-row">
+                        <span class="offer-data-label">ASKING_PRICE</span>
+                        <span class="offer-data-value" id="offer-asking-price">$0</span>
+                    </div>
+                </div>
+                
+                <!-- Offer Input Area -->
+                <div class="offer-input-section">
+                    <label class="offer-input-label">YOUR_OFFER</label>
+                    <div class="offer-input-wrapper">
+                        <span class="offer-currency">$</span>
+                        <input 
+                            type="text" 
+                            id="offer-amount-input" 
+                            class="offer-amount-input" 
+                            placeholder="0"
+                            autocomplete="off"
+                        >
+                        <span class="offer-input-cursor"></span>
+                    </div>
+                </div>
+                
+                <!-- Secure Message Section -->
+                <div class="offer-message-section">
+                    <label class="offer-message-label">SECURE_MESSAGE (OPTIONAL)</label>
+                    <textarea 
+                        id="offer-message-input" 
+                        class="offer-message-input" 
+                        placeholder="e.g., 'I have the cash ready'"
+                        rows="3"
+                    ></textarea>
+                </div>
+                
+                <!-- Status Message -->
+                <div class="offer-status" id="offer-status"></div>
+                
+                <!-- Actions -->
+                <div class="offer-terminal-actions">
+                    <button id="transmit-offer-btn" class="offer-transmit-btn">
+                        <span id="transmit-offer-text">TRANSMIT_OFFER</span>
+                        <span id="transmit-offer-loader" style="display: none;">ENCRYPTING...</span>
+                    </button>
+                    <button class="offer-cancel-btn" id="close-offer-modal">CANCEL</button>
                 </div>
             </div>
         </div>
