@@ -1,2 +1,0 @@
-// Login modal logic
-

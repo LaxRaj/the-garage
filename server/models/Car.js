@@ -22,8 +22,8 @@ const CarSchema = new mongoose.Schema({
     bids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bid' }],
     
     // Marketplace Logic
-    isListed: { type: Boolean, default: false }, // Whether car is listed on marketplace (public can see)
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Current owner (null = "The House" / Contractor)
+    isListed: { type: Boolean, default: true }, // Whether car is listed on marketplace (public can see)
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Current owner
     highestBidder: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // Highest bidder for auctions
 });
 

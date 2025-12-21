@@ -184,10 +184,18 @@ router.get('/contractor/assets', ensureContractor, async (req, res) => {
             ]
         }).sort({ make: 1, model: 1 });
         
-        console.log(`House Vault: Found ${cars.length} assets`);
+        console.log(`✅ House Vault: Found ${cars.length} assets`);
+        if (cars.length === 0) {
+            console.warn('⚠️  House Vault is empty! Checking database...');
+            const allCars = await Car.find({});
+            console.log(`   Total cars in database: ${allCars.length}`);
+            allCars.forEach(car => {
+                console.log(`   - ${car.make} ${car.model}: owner=${car.owner || 'null'}, isListed=${car.isListed}`);
+            });
+        }
         res.json(cars);
     } catch (err) {
-        console.error('Contractor assets fetch error:', err);
+        console.error('❌ Contractor assets fetch error:', err);
         res.status(500).json({ error: 'Server Error: Could not retrieve contractor assets.' });
     }
 });

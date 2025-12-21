@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Garage - Showroom</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Grotesk:wght@300;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body class="showroom-page">
+    <div class="noise-overlay"></div>
+    
+    <!-- Global Crosshair Cursor -->
+    <div class="global-cursor" id="global-cursor">
+        <div class="cursor-crosshair-h"></div>
+        <div class="cursor-crosshair-v"></div>
+    </div>
+
+    <!-- Showroom Page: Car X-Ray Viewer -->
+    <div id="showroom-section" class="showroom-page">
+        <!-- Layer 1: Background Watermark -->
+        <div class="bg-watermark">
+            <h1 id="archive-watermark">ARCHIVE</h1>
+        </div>
+        
+        <!-- Layer 2: Car Wrapper with Vignette Mask -->
+        <div class="car-wrapper">
+            <!-- Thermal Layer (Bottom) - Red heat map view -->
+            <div class="layer thermal">
+                <img src="/assets/photo/porsche_911.png" alt="Thermal Scan" id="thermal-img">
+            </div>
+    
+            <!-- Real Layer (Top) - Masked to reveal thermal underneath -->
+            <div class="layer real" id="real-layer">
+                <img src="/assets/photo/porsche_911.png" alt="Car" id="real-img">
+            </div>
+        </div>
+        
+        <!-- Scanner Cursor -->
+        <div class="scanner-cursor" id="scanner-cursor">
+            <div class="crosshair-h"></div>
+            <div class="crosshair-v"></div>
+        </div>
+        
+        <!-- Navigation Arrows -->
+        <button class="stealth-nav stealth-nav-left" id="prev-btn" aria-label="Previous car">
+            <span>&lt;</span>
+        </button>
+        <button class="stealth-nav stealth-nav-right" id="next-btn" aria-label="Next car">
+            <span>&gt;</span>
+        </button>
+        
+        <!-- Stealth Footer -->
+        <div class="stealth-footer">
+            <div class="footer-content">
+                <!-- Left Group: Asset ID & Status -->
+                <div class="footer-group footer-left">
+                    <span class="asset-id" id="stealth-asset-id">REF: _001</span>
+                    <span class="status-indicator" id="stealth-status-indicator">
+                        <span class="status-dot"></span>
+                    </span>
+                </div>
+                
+                <!-- Center Group: Car Name -->
+                <div class="footer-group footer-center">
+                    <span class="car-name" id="stealth-car-name">MCLAREN F1</span>
+                </div>
+                
+                <!-- Right Group: Price & Action Button -->
+                <div class="footer-group footer-right">
+                    <span class="car-price" id="stealth-car-price">$20M</span>
+                    <button class="stealth-action-btn" id="action-btn">
+                        <span id="action-text">BUY NOW</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Specs Drawer -->
+            <div class="specs-drawer">
+                <div class="drawer-content">
+                    <div class="drawer-row">
+                        <span class="drawer-label">ENGINE</span>
+                        <span class="drawer-val redacted" id="drawer-engine"></span>
+                    </div>
+                    <div class="drawer-row">
+                        <span class="drawer-label">0-60</span>
+                        <span class="drawer-val redacted" id="drawer-zerosixty"></span>
+                    </div>
+                    <!-- Bid History Section -->
+                    <div class="drawer-row drawer-section-header">
+                        <span class="drawer-label">BID_HISTORY</span>
+                    </div>
+                    <div id="bid-history-container" class="bid-history-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Terminal Modal -->
+    <div class="payment-terminal-overlay" id="payment-modal">
+        <div class="payment-terminal">
+            <div class="terminal-header">
+                <h2 class="terminal-title">WIRE_TRANSFER_PROTOCOL</h2>
+                <span class="terminal-asset" id="terminal-car-name">ASSET_NAME</span>
+                <span class="terminal-amount" id="terminal-amount">$0.00</span>
+            </div>
+            
+            <div class="terminal-body">
+                <!-- Billing Information Section -->
+                <div class="terminal-section">
+                    <label class="terminal-label">BILLING_INFORMATION</label>
+                    <div class="billing-form">
+                        <input type="text" id="billing-name" class="terminal-input" placeholder="FULL_NAME" required>
+                        <input type="email" id="billing-email" class="terminal-input" placeholder="EMAIL_ADDRESS" required>
+                        <input type="text" id="billing-line1" class="terminal-input" placeholder="ADDRESS_LINE_1" required>
+                        <input type="text" id="billing-line2" class="terminal-input" placeholder="ADDRESS_LINE_2 (OPTIONAL)">
+                        <div class="billing-row">
+                            <input type="text" id="billing-city" class="terminal-input" placeholder="CITY" required>
+                            <input type="text" id="billing-state" class="terminal-input" placeholder="STATE" required>
+                            <input type="text" id="billing-postal" class="terminal-input" placeholder="ZIP_CODE" required>
+                        </div>
+                        <select id="billing-country" class="terminal-input" required>
+                            <option value="US">UNITED_STATES</option>
+                            <option value="CA">CANADA</option>
+                            <option value="GB">UNITED_KINGDOM</option>
+                            <option value="AU">AUSTRALIA</option>
+                            <option value="DE">GERMANY</option>
+                            <option value="FR">FRANCE</option>
+                            <option value="IT">ITALY</option>
+                            <option value="JP">JAPAN</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Payment Information Section -->
+                <div class="terminal-section">
+                    <label class="terminal-label">CARD_INFORMATION</label>
+                    <div class="test-mode-notice">
+                        <span class="test-badge">TEST_MODE</span>
+                        <span class="test-info">Use Stripe test cards: 4242 4242 4242 4242 (any future date, any CVC)</span>
+                    </div>
+                    <div id="card-element" class="stripe-element-container"></div>
+                </div>
+                
+                <div class="terminal-status" id="payment-status"></div>
+                
+                <div class="terminal-actions">
+                    <button id="submit-payment" class="terminal-submit-btn">
+                        <span id="submit-text">INITIATE_TRANSFER</span>
+                        <span id="submit-loader" class="loader" style="display: none;">PROCESSING...</span>
+                    </button>
+                    <button class="terminal-cancel-btn" id="close-payment-modal">ABORT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="components/navbar.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/archive.js"></script>
+</body>
+</html>
+

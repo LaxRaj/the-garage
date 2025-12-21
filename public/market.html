@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Garage - Market</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Grotesk:wght@300;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body class="market-page">
+    <div class="noise-overlay"></div>
+    
+    <!-- Global Crosshair Cursor -->
+    <div class="global-cursor" id="global-cursor">
+        <div class="cursor-crosshair-h"></div>
+        <div class="cursor-crosshair-v"></div>
+    </div>
+
+    <!-- Market Page: Grid and Auctions -->
+    <div id="market-section" class="market-page">
+        <div class="market-header">
+            <h2>CLASSIFIED_ASSETS</h2>
+            <span>[SECURE_CONNECTION]</span>
+        </div>
+    
+        <div class="asset-grid" id="asset-grid">
+            <!-- Cards will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <script src="components/navbar.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/archive.js"></script>
+</body>
+</html>
+

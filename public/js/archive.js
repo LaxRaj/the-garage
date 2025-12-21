@@ -11,11 +11,46 @@ window.garageInventory = garageInventory;
 window.currentIndex = currentIndex;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initShowroomCarousel();
-    initXRayScanner();
-    initClassifiedGrid();
-    initStripePayment();
+    // Only initialize if on showroom or market page
+    const currentPath = window.location.pathname;
+    if (currentPath === '/showroom') {
+        initShowroomCarousel();
+        initXRayScanner();
+    }
+    if (currentPath === '/market') {
+        initClassifiedGrid();
+    }
+    // Stripe payment can be initialized on demand
+    // initStripePayment();
 });
+
+// Function to load a specific car in showroom (called from profile page)
+window.loadShowroom = async function(carId) {
+    try {
+        const response = await fetch(`/api/cars/${carId}`);
+        if (!response.ok) throw new Error('Car not found');
+        
+        const car = await response.json();
+        
+        // Find car index in inventory
+        const carIndex = garageInventory.findIndex(c => c._id === carId || c.id === carId);
+        
+        if (carIndex !== -1) {
+            currentIndex = carIndex;
+            window.currentIndex = carIndex;
+            updateShowroom(carIndex, false);
+        } else {
+            // Car not in current inventory, add it temporarily
+            garageInventory.push(car);
+            currentIndex = garageInventory.length - 1;
+            window.currentIndex = currentIndex;
+            window.garageInventory = garageInventory;
+            updateShowroom(currentIndex, false);
+        }
+    } catch (error) {
+        console.error('Error loading car:', error);
+    }
+};
 
 // ============================================
 // SHOWROOM CAROUSEL LOGIC
@@ -561,7 +596,7 @@ function handleAssetAccess(asset, isAuction) {
     // Scroll to showroom section
     const showroomSection = document.getElementById('showroom-section');
     if (showroomSection) {
-        showroomSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Navigation handled by routing - no scroll needed
     }
     
     // Update showroom to display this car

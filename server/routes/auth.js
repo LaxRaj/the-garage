@@ -12,6 +12,17 @@ router.get('/google', (req, res, next) => {
             message: 'Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in environment variables'
         });
     }
+    
+    // Log the expected callback URL based on request headers
+    const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host || req.get('host');
+    const expectedCallbackURL = process.env.CALLBACK_URL || `${protocol}://${host}/auth/google/callback`;
+    
+    console.log('🔐 OAuth login initiated');
+    console.log('   Request origin:', `${protocol}://${host}`);
+    console.log('   Expected callback URL:', expectedCallbackURL);
+    console.log('   ⚠️  Make sure this EXACT URL is in Google Cloud Console → Authorized redirect URIs');
+    
     passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
 
@@ -25,8 +36,8 @@ router.get('/google/callback', (req, res, next) => {
     }
     passport.authenticate('google', { failureRedirect: '/' })(req, res, next);
 }, (req, res) => {
-    // Success! Redirect back to the garage door
-    res.redirect('/');
+    // Success! Redirect back to the garage door with success parameter
+    res.redirect('/?login=success');
 });
 
 // 3. Logout

@@ -66,7 +66,6 @@ const connectDB = async () => {
 };
 
 // Middleware
-app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.json());
 
 
@@ -101,10 +100,19 @@ app.use('/auth', require('./routes/auth'));
 app.use('/api', require('./routes/api'));
 app.use('/api/payment', require('./routes/payment'));
 
-// Main Entry
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
+// Page Routes (must come before static file serving)
+try {
+    const pagesRouter = require('./routes/pages');
+    app.use('/', pagesRouter);
+    console.log('✅ Page routes registered');
+    console.log('   Routes: /, /showroom, /market, /profile');
+} catch (err) {
+    console.error('❌ Error loading page routes:', err);
+}
+
+// Static files (for assets like CSS, JS, images - must come after routes)
+// Routes are checked first, so HTML files will be served by routes, not static middleware
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const PORT = process.env.PORT || 3001;
 

@@ -1,25 +1,410 @@
-// Main application logic
-// Wait for DOM
-let isLoggedIn = false; // Declare the variable
+// Main application logic - Page-Aware Architecture
+// Detect current page
+const currentPath = window.location.pathname;
+const isHomePage = currentPath === '/';
+const isShowroomPage = currentPath === '/showroom';
+const isMarketPage = currentPath === '/market';
+const isProfilePage = currentPath === '/profile';
+
+let isLoggedIn = false;
+let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    
-    gsap.registerPlugin(ScrollTrigger);
-
     // Initialize Global Crosshair Cursor
     initGlobalCursor();
 
-    const doorSection = document.getElementById('garage-door-section');
-    const doorContainer = document.querySelector('.door-container');
-    const heroTitle = document.querySelector('.hero-title');
-    const lock = document.getElementById('auth-trigger');
-    const modal = document.getElementById('login-modal');
-    const closeModal = document.querySelector('.close-modal');
+    // Initialize global authentication system (works on all pages)
+    initGlobalAuth();
 
-    // X-Ray Scanner logic moved to archive.js
+    // Page-specific initialization
+    if (isHomePage) {
+        initHomePage();
+    } else if (isShowroomPage) {
+        initShowroomPage();
+    } else if (isMarketPage) {
+        initMarketPage();
+    } else if (isProfilePage) {
+        initProfilePage();
+    }
+});
+
+// ============================================
+// GLOBAL AUTHENTICATION SYSTEM
+// ============================================
+function initGlobalAuth() {
+    // Check auth status on page load
+    checkAuthStatus();
     
+    // Setup login modals (works on all pages)
+    setupLoginModals();
+    
+    // Setup logout button (in navbar)
+    setupNavbarLogout();
+    
+    // Protect navigation links
+    protectNavigationLinks();
+}
 
-    // Prevent scrolling initially
+// Global auth status check
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/auth/status', { 
+            credentials: 'include',
+            method: 'GET'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Auth check failed');
+        }
+        
+        const data = await response.json();
+        isLoggedIn = data.loggedIn || false;
+        currentUser = data.user || null;
+        
+        // Update UI based on auth status
+        updateAuthUI(isLoggedIn);
+        
+        return isLoggedIn;
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        isLoggedIn = false;
+        currentUser = null;
+        updateAuthUI(false);
+        return false;
+    }
+}
+
+// Update UI based on auth status
+function updateAuthUI(loggedIn) {
+    // Update lock status on home page
+    if (isHomePage) {
+        const statusText = document.querySelector('.status-text');
+        const shackle = document.querySelector('.shackle');
+        
+        if (loggedIn) {
+            if (statusText) {
+                statusText.textContent = "UNLOCKED";
+                statusText.style.color = "#00ff00";
+            }
+            if (shackle) {
+                shackle.style.transform = "translateY(-20px)";
+            }
+        } else {
+            if (statusText) {
+                statusText.textContent = "LOCKED";
+                statusText.style.color = "";
+            }
+            if (shackle) {
+                shackle.style.transform = "";
+            }
+        }
+    }
+}
+
+// Setup login modals (works on all pages)
+function setupLoginModals() {
+    const loginModal = document.getElementById('login-modal');
+    const loginFormModal = document.getElementById('login-form-modal');
+    
+    if (!loginModal && !loginFormModal) {
+        // Modals don't exist on this page, skip
+        return;
+    }
+    
+    // Login/Join buttons (home page)
+    const heroLoginBtn = document.getElementById('hero-login-btn');
+    const heroJoinBtn = document.getElementById('hero-join-btn');
+    
+    if (heroLoginBtn && loginModal) {
+        heroLoginBtn.addEventListener('click', () => {
+            loginModal.classList.add('active');
+        });
+    }
+    
+    if (heroJoinBtn && loginModal) {
+        heroJoinBtn.addEventListener('click', () => {
+            loginModal.classList.add('active');
+        });
+    }
+    
+    // Close modals
+    const closeButtons = document.querySelectorAll('.close-modal');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (loginModal) loginModal.classList.remove('active');
+            if (loginFormModal) loginFormModal.classList.remove('active');
+        });
+    });
+    
+    // Close when clicking outside
+    if (loginModal) {
+        loginModal.addEventListener('click', (e) => {
+            if (e.target === loginModal) {
+                loginModal.classList.remove('active');
+            }
+        });
+    }
+    
+    if (loginFormModal) {
+        loginFormModal.addEventListener('click', (e) => {
+            if (e.target === loginFormModal) {
+                loginFormModal.classList.remove('active');
+            }
+        });
+    }
+    
+    // Modal switching
+    const switchToLogin = document.getElementById('switch-to-login');
+    const switchToSignup = document.getElementById('switch-to-signup');
+    
+    if (switchToLogin && loginModal && loginFormModal) {
+        switchToLogin.addEventListener('click', () => {
+            loginModal.classList.remove('active');
+            loginFormModal.classList.add('active');
+        });
+    }
+    
+    if (switchToSignup && loginModal && loginFormModal) {
+        switchToSignup.addEventListener('click', () => {
+            loginFormModal.classList.remove('active');
+            loginModal.classList.add('active');
+        });
+    }
+    
+    // OAuth buttons
+    const googleBtns = document.querySelectorAll('.btn-oauth.google');
+    const githubBtns = document.querySelectorAll('.btn-oauth.github');
+    
+    googleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            window.location.href = '/auth/google';
+        });
+    });
+    
+    githubBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            console.log('GitHub OAuth not yet implemented');
+        });
+    });
+    
+    // Signup form
+    const signupForm = document.getElementById('signup-form');
+    const signupError = document.getElementById('signup-error');
+    
+    if (signupForm) {
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (signupError) signupError.classList.remove('show');
+            
+            const formData = {
+                displayName: document.getElementById('signup-name')?.value,
+                email: document.getElementById('signup-email')?.value,
+                password: document.getElementById('signup-password')?.value
+            };
+            
+            try {
+                const response = await fetch('/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Close modals
+                    if (loginModal) loginModal.classList.remove('active');
+                    if (loginFormModal) loginFormModal.classList.remove('active');
+                    
+                    // Reload to update auth status
+                    window.location.reload();
+                } else {
+                    if (signupError) {
+                        signupError.textContent = data.message || 'Signup failed. Please try again.';
+                        signupError.classList.add('show');
+                    }
+                }
+            } catch (err) {
+                console.error('Signup error:', err);
+                if (signupError) {
+                    signupError.textContent = 'Network error. Please try again.';
+                    signupError.classList.add('show');
+                }
+            }
+        });
+    }
+    
+    // Login form
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (loginError) loginError.classList.remove('show');
+            
+            const formData = {
+                email: document.getElementById('login-email')?.value,
+                password: document.getElementById('login-password')?.value
+            };
+            
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Close modals
+                    if (loginModal) loginModal.classList.remove('active');
+                    if (loginFormModal) loginFormModal.classList.remove('active');
+                    
+                    // Reload to update auth status
+                    window.location.reload();
+                } else {
+                    if (loginError) {
+                        loginError.textContent = data.message || 'Login failed. Please try again.';
+                        loginError.classList.add('show');
+                    }
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                if (loginError) {
+                    loginError.textContent = 'Network error. Please try again.';
+                    loginError.classList.add('show');
+                }
+            }
+        });
+    }
+}
+
+// Setup navbar logout button
+function setupNavbarLogout() {
+    // Function to setup logout handler
+    const attachLogoutHandler = () => {
+        const navLogout = document.getElementById('nav-logout');
+        if (!navLogout) {
+            return false; // Not found yet
+        }
+        
+        // Check if already has handler (avoid duplicate listeners)
+        if (navLogout.dataset.handlerAttached === 'true') {
+            return true; // Already set up
+        }
+        
+        navLogout.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('🔓 Logout button clicked');
+            
+            try {
+                const response = await fetch('/auth/logout', { 
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ Logout successful:', data);
+                    
+                    // Clear local state
+                    isLoggedIn = false;
+                    currentUser = null;
+                    
+                    // Redirect to home
+                    window.location.href = '/';
+                } else {
+                    console.warn('⚠️ POST logout failed, trying GET logout');
+                    // Fallback: try GET logout
+                    window.location.href = '/auth/logout';
+                }
+            } catch (error) {
+                console.error('❌ Logout error:', error);
+                // Fallback: try GET logout
+                window.location.href = '/auth/logout';
+            }
+        });
+        
+        // Mark as attached
+        navLogout.dataset.handlerAttached = 'true';
+        return true;
+    };
+    
+    // Try immediately
+    if (!attachLogoutHandler()) {
+        // If not found, try again after a short delay (navbar might still be loading)
+        let attempts = 0;
+        const maxAttempts = 10;
+        const interval = setInterval(() => {
+            attempts++;
+            if (attachLogoutHandler() || attempts >= maxAttempts) {
+                clearInterval(interval);
+            }
+        }, 100);
+    }
+}
+
+// Protect navigation links - check auth before navigating
+function protectNavigationLinks() {
+    // Protect "ENTER SHOP" button/link
+    const heroEnterBtn = document.getElementById('hero-enter-btn');
+    if (heroEnterBtn) {
+        heroEnterBtn.addEventListener('click', async (e) => {
+            // Always check auth status (in case it changed)
+            const isAuth = await checkAuthStatus();
+            
+            if (!isAuth) {
+                e.preventDefault();
+                e.stopPropagation();
+                const loginModal = document.getElementById('login-modal');
+                if (loginModal) {
+                    loginModal.classList.add('active');
+                }
+                return false;
+            }
+            // If logged in, allow navigation (link will handle it naturally)
+            console.log('✅ User authenticated, allowing navigation to showroom');
+        });
+    }
+    
+    // Protect navbar links (they're already protected server-side, but add client-side UX)
+    document.addEventListener('click', async (e) => {
+        const link = e.target.closest('a[href="/showroom"], a[href="/market"], a[href="/profile"]');
+        if (link) {
+            // Always check auth status (in case it changed)
+            const isAuth = await checkAuthStatus();
+            if (!isAuth) {
+                e.preventDefault();
+                e.stopPropagation();
+                // Show login modal if on home page, otherwise redirect to home
+                const loginModal = document.getElementById('login-modal');
+                if (loginModal && isHomePage) {
+                    loginModal.classList.add('active');
+                } else {
+                    window.location.href = '/';
+                }
+                return false;
+            }
+            // If logged in, allow navigation
+            console.log('✅ User authenticated, allowing navigation to', link.getAttribute('href'));
+        }
+    }, true);
+}
+
+// ============================================
+// HOME PAGE INITIALIZATION
+// ============================================
+function initHomePage() {
+    // Prevent scrolling initially (only on home page)
     document.body.style.overflowY = "hidden";
     
     // Prevent scroll attempts when not logged in
@@ -36,543 +421,363 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('touchmove', preventScroll, { passive: false });
     window.addEventListener('scroll', preventScroll, { passive: false });
     
-    // Check Login Status on Load
-    fetch('/auth/status')
-    .then(res => res.json())
-    .then(data => {
-        if (data.loggedIn) {
-            isLoggedIn = true;
-            // Update the lock visually to look "Unlocked"
-            document.querySelector('.status-text').textContent = "UNLOCKED";
-            document.querySelector('.status-text').style.color = "#00ff00";
-            document.querySelector('.shackle').style.transform = "translateY(-20px)"; // Pop the lock open
-            
-            // Allow scroll - remove event listeners and enable scrolling
-            window.removeEventListener('wheel', preventScroll);
-            window.removeEventListener('touchmove', preventScroll);
-            window.removeEventListener('scroll', preventScroll);
-            document.body.classList.add('scroll-enabled');
-            document.body.style.overflowY = "auto";
-            
-            // Initialize scroll animations now that user is logged in
-            initScrollAnimation();
-        }
-    })
-    .catch(err => {
-        console.error('Auth check failed:', err);
-        // Keep scroll disabled if auth check fails
-    });
-
-    // 1. Lock Interaction
-    lock.addEventListener('click', () => {
-        if (!isLoggedIn) {
-            modal.classList.add('active');
-        } else {
-            // If logged in, click opens the door automatically
-            window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
-        }
-    });
-
-    closeModal.addEventListener('click', () => {
-        modal.classList.remove('active');
-    });
+    // Function to enable scrolling when logged in
+    const enableScrolling = () => {
+        window.removeEventListener('wheel', preventScroll);
+        window.removeEventListener('touchmove', preventScroll);
+        window.removeEventListener('scroll', preventScroll);
+        document.body.classList.add('scroll-enabled');
+        document.body.style.overflowY = "auto";
+    };
     
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('active');
+    // Check auth status on load and after OAuth redirect
+    checkAuthStatus().then((isAuth) => {
+        if (isAuth) {
+            enableScrolling();
         }
     });
     
-    // Handle OAuth button clicks (works for both modals)
-    const googleBtns = document.querySelectorAll('.btn-oauth.google');
-    const githubBtns = document.querySelectorAll('.btn-oauth.github');
-    
-    googleBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            window.location.href = '/auth/google';
+    // Also check after a delay (in case OAuth redirect just happened)
+    setTimeout(() => {
+        checkAuthStatus().then((isAuth) => {
+            if (isAuth) {
+                enableScrolling();
+            }
         });
-    });
+    }, 500);
     
-    githubBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // GitHub OAuth would go here when implemented
-            console.log('GitHub OAuth not yet implemented');
-        });
-    });
-    
-    // Modal switching
-    const loginFormModal = document.getElementById('login-form-modal');
-    const switchToLogin = document.getElementById('switch-to-login');
-    const switchToSignup = document.getElementById('switch-to-signup');
-    
-    if (switchToLogin) {
-        switchToLogin.addEventListener('click', () => {
-            modal.classList.remove('active');
-            loginFormModal.classList.add('active');
-        });
-    }
-    
-    if (switchToSignup) {
-        switchToSignup.addEventListener('click', () => {
-            loginFormModal.classList.remove('active');
-            modal.classList.add('active');
-        });
-    }
-    
-    // Close login form modal
-    loginFormModal.addEventListener('click', (e) => {
-        if (e.target === loginFormModal || e.target.classList.contains('close-modal')) {
-            loginFormModal.classList.remove('active');
-        }
-    });
-    
-    // Handle Signup Form
-    const signupForm = document.getElementById('signup-form');
-    const signupError = document.getElementById('signup-error');
-    
-    if (signupForm) {
-        signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            signupError.classList.remove('show');
-            
-            const formData = {
-                displayName: document.getElementById('signup-name').value,
-                email: document.getElementById('signup-email').value,
-                password: document.getElementById('signup-password').value
-            };
-            
-            try {
-                const response = await fetch('/auth/signup', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    // Success - reload page to update login status
-                    window.location.reload();
-                } else {
-                    // Show error
-                    signupError.textContent = data.message || 'Signup failed. Please try again.';
-                    signupError.classList.add('show');
+    // Check if URL has login success parameter (from OAuth redirect)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('login') || urlParams.has('oauth_success')) {
+        setTimeout(() => {
+            checkAuthStatus().then((isAuth) => {
+                if (isAuth) {
+                    enableScrolling();
                 }
-            } catch (err) {
-                signupError.textContent = 'Network error. Please try again.';
-                signupError.classList.add('show');
-                console.error('Signup error:', err);
-            }
-        });
+            });
+        }, 1000);
     }
     
-    // Handle Login Form
-    const loginForm = document.getElementById('login-form');
-    const loginError = document.getElementById('login-error');
-    
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            loginError.classList.remove('show');
-            
-            const formData = {
-                email: document.getElementById('login-email').value,
-                password: document.getElementById('login-password').value
-            };
-            
-            try {
-                const response = await fetch('/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    // Success - reload page to update login status
-                    window.location.reload();
-                } else {
-                    // Show error
-                    loginError.textContent = data.message || 'Login failed. Please try again.';
-                    loginError.classList.add('show');
-                }
-            } catch (err) {
-                loginError.textContent = 'Network error. Please try again.';
-                loginError.classList.add('show');
-                console.error('Login error:', err);
-            }
-        });
-    }
-
-    // 2. The Garage Door Scroll Animation - Hyper-Realistic
-    // Telescoping panels, parallax background, chain animation
-    // Only initialize when logged in
-    let doorTimeline = null;
-    
-    function initScrollAnimation() {
-        if (doorTimeline) return; // Already initialized
-        
-        const doorSection = document.getElementById('garage-door-section');
-        const doorPanels = document.querySelectorAll('.door-panel');
-        const parallaxBg = document.querySelector('.parallax-bg');
-        const parallaxImg = document.getElementById('parallax-img');
-        const chainTracks = document.querySelectorAll('.chain-track');
-        const heroTitle = document.querySelector('.hero-title');
-        
-        if (!doorSection || doorPanels.length === 0) {
-            console.warn('Door elements not found for animation');
-            return;
-        }
-        
-        // Load featured car image for parallax background
-        if (parallaxImg) {
-            fetch('/api/cars/featured')
-                .then(res => res.json())
-                .then(car => {
-                    if (car && car.image) {
-                        parallaxImg.src = car.image;
-                    }
-                })
-                .catch(err => console.warn('Could not load featured car for parallax'));
-        }
-        
-        // Pin the section and create scroll-triggered animation
-        doorTimeline = gsap.timeline({
-            scrollTrigger: {
-                trigger: "#garage-door-section",
-                start: "top top",
-                end: "+=100%", // Scroll distance equal to viewport height
-                scrub: 1, // Smooth scrubbing tied to scroll
-                pin: true, // Keep the section pinned while scrolling
-                anticipatePin: 1,
-            }
-        });
-
-        // Telescoping Effect: Panels slide up with stagger
-        // Bottom panel pushes top ones up, creating realistic garage door motion
-        doorPanels.forEach((panel, index) => {
-            // Reverse order: bottom panel (index 4) moves first, top panel (index 0) moves last
-            const reverseIndex = doorPanels.length - 1 - index;
-            doorTimeline.to(panel, {
-                yPercent: -100, // Slide up completely
-                ease: "none"
-            }, reverseIndex * 0.05); // Stagger: 0.05s delay between panels
-        });
-
-        // Parallax Background: Move up and increase brightness as door opens
-        if (parallaxBg && parallaxImg) {
-            doorTimeline.to(parallaxImg, {
-                yPercent: -20, // Move background image up slightly
-                ease: "power2.out"
-            }, 0)
-            .to(parallaxBg, {
-                filter: "brightness(0.6) blur(1px)", // Increase brightness as door opens
-                ease: "power2.out"
-            }, 0);
-        }
-
-        // Chain Track Animation: Background position moves to simulate chain movement
-        chainTracks.forEach(track => {
-            doorTimeline.to(track, {
-                backgroundPosition: "0 100%", // Move chain pattern down
-                ease: "none"
-            }, 0);
-        });
-
-        // Hero Title: Fade out and slight parallax
-        if (heroTitle) {
-            doorTimeline.to(heroTitle, {
-                xPercent: 10, // Slight parallax movement
-                opacity: 0,
-                ease: "power2.out"
-            }, 0.3); // Start fading after door starts opening
-        }
-    }
-
-    // Auction logic moved to auction.js
-    
-    // Initialize Terminal Dashboard
-    initTerminal();
-    
-    // Initialize Secret Terminal Trigger
-    initTerminalTrigger();
-    
-}); // End of DOMContentLoaded
+    // Home page initialization complete
+}
 
 // ============================================
-// TERMINAL DASHBOARD (Screen 4 - Cyber-Industrial Command Center)
+// SHOWROOM PAGE INITIALIZATION
+// ============================================
+function initShowroomPage() {
+    // Enable scrolling on showroom page (protected route, user is logged in)
+    document.body.style.overflowY = "auto";
+    document.body.classList.add('scroll-enabled');
+    // Check if carId is in URL query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const carId = urlParams.get('carId');
+    
+    // Initialize showroom immediately (no scroll trigger needed)
+    if (typeof window.initShowroomCarousel === 'function') {
+        window.initShowroomCarousel();
+    }
+    
+    // Load specific car if carId provided
+    if (carId && typeof window.loadShowroom === 'function') {
+        window.loadShowroom(carId);
+    } else if (typeof window.initXRayScanner === 'function') {
+        window.initXRayScanner();
+    }
+}
+
+// ============================================
+// MARKET PAGE INITIALIZATION
+// ============================================
+function initMarketPage() {
+    // Enable scrolling on market page (protected route, user is logged in)
+    document.body.style.overflowY = "auto";
+    document.body.classList.add('scroll-enabled');
+    // Initialize market grid immediately
+    if (typeof window.initClassifiedGrid === 'function') {
+        window.initClassifiedGrid();
+    }
+}
+
+// ============================================
+// PROFILE PAGE INITIALIZATION
+// ============================================
+function initProfilePage() {
+    // Enable scrolling on profile page (protected route, user is logged in)
+    document.body.style.overflowY = "auto";
+    document.body.classList.add('scroll-enabled');
+    // Initialize profile section
+    initProfileSection();
+}
+
+// ============================================
+// PROFILE SECTION - Executive Dashboard
 // ============================================
 
-// Global state for user's garage
-let userGarage = [];
-let transactionHistory = [];
-
-async function initTerminal() {
-    const terminalSection = document.getElementById('terminal-section');
-    if (!terminalSection) return;
+async function initProfileSection() {
+    const profileSection = document.getElementById('profile-section');
+    if (!profileSection) return;
     
     try {
-        // Fetch user data from API
-        const [userResponse, roleResponse] = await Promise.all([
-            fetch('/auth/status'),
-            fetch('/api/user/role').catch(() => ({ json: () => ({ role: 'user' }) }))
-        ]);
-        
+        // Fetch user data
+        const userResponse = await fetch('/auth/status');
         const userStatus = await userResponse.json();
-        const roleData = await roleResponse.json();
         
         if (!userStatus.loggedIn) {
-            console.warn('User not logged in, using mock data');
-            initTerminalWithMockData();
+            // Hide profile section if not logged in
+            profileSection.style.display = 'none';
             return;
         }
         
         const user = userStatus.user;
+        
+        // Fetch user role
+        const roleResponse = await fetch('/api/user/role').catch(() => ({ json: () => ({ role: 'user' }) }));
+        const roleData = await roleResponse.json();
         const userRole = roleData.role || 'user';
         
-        // Fetch garage/assets based on role
-        let garageResponse;
-        if (userRole === 'contractor') {
-            // Contractor sees all assets (HOUSE VAULT)
-            garageResponse = await fetch('/api/contractor/assets').catch(() => ({ json: () => [] }));
-        } else {
-            // Regular users see their owned cars
-            garageResponse = await fetch('/api/user/garage').catch(() => ({ json: () => [] }));
-        }
+        // Populate Identity Column
+        populateProfileIdentity(user, userRole);
         
-        const garageData = await garageResponse.json();
+        // Populate Ledger Tabs
+        await populateProfileLedger(user, userRole);
         
-        // Populate Profile Module
-        const operatorAlias = document.getElementById('operator-alias');
-        const operatorLevel = document.getElementById('operator-level');
-        const operatorId = document.getElementById('operator-id');
-        const geometricAvatar = document.getElementById('geometric-avatar');
-        
-        if (operatorAlias) operatorAlias.textContent = user.displayName?.toUpperCase().replace(/\s/g, '_') || 'OPERATOR_01';
-        if (operatorLevel) operatorLevel.textContent = `LEVEL_${String(userRole === 'contractor' ? 9 : 4).padStart(2, '0')}`;
-        if (operatorId) operatorId.textContent = `ID: ${user._id || user.id || 'REDACTED'}`;
-        
-        // Generate geometric avatar pattern
-        if (geometricAvatar) {
-            const level = userRole === 'contractor' ? 9 : 4;
-            const patterns = [
-                'linear-gradient(135deg, var(--thermal-red) 0%, transparent 50%)',
-                'linear-gradient(45deg, var(--thermal-red) 0%, transparent 50%)',
-                'linear-gradient(225deg, var(--thermal-red) 0%, transparent 50%)',
-                'linear-gradient(315deg, var(--thermal-red) 0%, transparent 50%)'
-            ];
-            geometricAvatar.style.background = patterns[level % patterns.length];
-        }
-        
-        // Populate Satellite Module
-        const radarPulse = document.getElementById('radar-pulse');
-        const satelliteCoords = document.getElementById('satellite-coords');
-        
-        const location = { x: 40, y: 60 }; // Default location
-        if (radarPulse) {
-            radarPulse.style.left = `${location.x}%`;
-            radarPulse.style.top = `${location.y}%`;
-        }
-        
-        if (satelliteCoords) {
-            const lat = (90 - (location.y * 1.8)).toFixed(2);
-            const lon = (-180 + (location.x * 3.6)).toFixed(2);
-            satelliteCoords.textContent = `${lat}°N, ${lon}°W`;
-        }
-        
-        // Load garage/assets from API
-        if (Array.isArray(garageData)) {
-            console.log(`Loaded ${garageData.length} assets for ${userRole === 'contractor' ? 'House Vault' : 'user garage'}`);
-            userGarage = garageData.map(car => ({
-                ref: car._id || car.id,
-                model: `${car.make} ${car.model}`,
-                value: `$${car.price ? (car.price >= 1000000 ? (car.price / 1000000).toFixed(1) + 'M' : (car.price / 1000).toFixed(0) + 'K') : '0'}`,
-                status: car.status || 'SECURE',
-                listed: car.isListed || false,
-                carId: car._id || car.id,
-                isListed: car.isListed || false, // Store for button logic
-                owner: car.owner || null // Store owner for debugging
-            }));
-        } else {
-            console.warn('Garage data is not an array:', garageData);
-            userGarage = [];
-        }
-        
-        // Update tab label for contractors
-        if (userRole === 'contractor') {
-            const garageTab = document.querySelector('.tab-btn[data-tab="garage"]');
-            if (garageTab) {
-                garageTab.textContent = 'HOUSE_VAULT';
-            }
-        }
-        
-        // Mock transaction history (replace with API call later)
-        transactionHistory = [];
-        
-        // Load user's bid history
-        await loadBidHistory();
-        
-        // Populate Asset Ledger
-        renderGarage();
-        renderHistory();
-        renderBids();
-        
-        // Setup Contractor Mode if applicable
-        if (userRole === 'contractor') {
-            setupContractorMode();
-        }
-        
-        // Setup Tab Switching
-        setupLedgerTabs();
-        
-        // Setup Sidebar Navigation
-        setupSidebarNav();
-        
-        // Setup Logout Button
-        setupLogoutButton();
-        
-        // Setup Back Button
-        setupBackButton();
+        // Setup tab switching
+        setupProfileTabs();
         
     } catch (error) {
-        console.error('Terminal initialization error:', error);
-        initTerminalWithMockData();
+        console.error('Profile initialization error:', error);
     }
 }
 
-function initTerminalWithMockData() {
-    // Fallback to mock data if API fails
-    const userData = {
-        alias: "OPERATOR_01",
-        level: 4,
-        userId: "USR_MOCK",
-        location: { x: 40, y: 60 },
-        garage: [],
-        history: []
-    };
-    
-    userGarage = userData.garage;
-    transactionHistory = userData.history;
-    
-    renderGarage();
-    renderHistory();
-    setupLedgerTabs();
-    setupSidebarNav();
-}
-
-function renderGarage() {
-    const garageTbody = document.getElementById('garage-tbody');
-    if (!garageTbody) return;
-    
-    garageTbody.innerHTML = '';
-    
-    if (userGarage.length === 0) {
-        garageTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #555; padding: 2rem;">NO_ASSETS_IN_GARAGE</td></tr>';
-        return;
+function populateProfileIdentity(user, userRole) {
+    // Avatar
+    const avatar = document.getElementById('profile-avatar');
+    if (avatar) {
+        const patterns = [
+            'linear-gradient(135deg, var(--thermal-red) 0%, transparent 50%)',
+            'linear-gradient(45deg, var(--thermal-red) 0%, transparent 50%)',
+            'linear-gradient(225deg, var(--thermal-red) 0%, transparent 50%)',
+            'linear-gradient(315deg, var(--thermal-red) 0%, transparent 50%)'
+        ];
+        avatar.style.background = patterns[3 % patterns.length];
     }
     
-    userGarage.forEach((asset, index) => {
-        const row = document.createElement('tr');
-        row.className = 'garage-row';
-        row.dataset.ref = asset.ref;
+    // Alias
+    const alias = document.getElementById('profile-alias');
+    if (alias) {
+        alias.textContent = user.displayName?.toUpperCase().replace(/\s/g, '_') || 'OPERATOR_01';
+    }
+    
+    // Member Since
+    const memberSince = document.getElementById('profile-member-since');
+    if (memberSince && user.joinedAt) {
+        const date = new Date(user.joinedAt);
+        memberSince.textContent = date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    } else if (memberSince) {
+        memberSince.textContent = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    }
+    
+    // Account Status
+    const status = document.getElementById('profile-status');
+    if (status) {
+        if (userRole === 'contractor') {
+            status.textContent = 'CONTRACTOR';
+        } else {
+            status.textContent = 'VERIFIED BUYER';
+        }
+    }
+    
+    // Operator ID
+    const operatorId = document.getElementById('profile-operator-id');
+    if (operatorId) {
+        operatorId.textContent = user._id ? user._id.toString().substring(0, 8).toUpperCase() : '[REDACTED]';
+    }
+    
+    // Show contractor tab if applicable
+    const vaultTab = document.querySelector('.ledger-tab[data-tab="vault"]');
+    if (vaultTab && userRole === 'contractor') {
+        vaultTab.style.display = 'block';
+    }
+}
+
+async function populateProfileLedger(user, userRole) {
+    // MY GARAGE Tab
+    await populateGarageTab();
+    
+    // ACTIVE BIDS Tab
+    await populateBidsTab();
+    
+    // VAULT MANAGEMENT Tab (Contractor Only)
+    if (userRole === 'contractor') {
+        await populateVaultTab();
+    }
+}
+
+async function populateGarageTab() {
+    const garageGrid = document.getElementById('profile-garage-grid');
+    if (!garageGrid) return;
+    
+    try {
+        const response = await fetch('/api/user/garage');
+        const cars = await response.json();
         
-        const statusClass = asset.listed ? 'status-listed' : 'status-secure';
-        const statusText = asset.listed ? 'LIVE_ON_GRID' : 'SECURE';
-        // Contractor button logic: Yellow for deploy, Red for recall
-        const buttonText = asset.listed ? '[ RECALL_ASSET ]' : '[ DEPLOY_TO_MARKET ]';
-        const buttonClass = asset.listed ? 'deploy-btn recall' : 'deploy-btn deploy';
+        if (cars.length === 0) {
+            garageGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); font-family: var(--font-tech); letter-spacing: 2px; text-transform: uppercase;">NO_ASSETS_IN_GARAGE</div>';
+            return;
+        }
         
-        row.innerHTML = `
-            <td class="asset-ref">${asset.ref}</td>
-            <td>${asset.model}</td>
-            <td>${asset.value}</td>
-            <td class="${statusClass}">${statusText}</td>
-            <td style="display: flex; gap: 0.5rem; align-items: center;">
-                <button class="${buttonClass}" data-ref="${asset.ref}" data-car-id="${asset.carId || asset.ref}">${buttonText}</button>
-                <button class="deploy-btn view-asset-btn" data-car-id="${asset.carId || asset.ref}" style="border-color: #555; color: #888; font-size: 0.6rem; padding: 0.3rem 0.6rem;">VIEW_ASSET</button>
-            </td>
-        `;
+        garageGrid.innerHTML = cars.map(car => `
+            <div class="garage-item">
+                <img src="${car.image || '/assets/photo/porsche_911.png'}" alt="${car.make} ${car.model}" class="garage-item-image" onerror="this.src='/assets/photo/porsche_911.png'">
+                <div class="garage-item-name">${car.make} ${car.model}</div>
+                <div class="garage-item-details">
+                    ${car.year || 'N/A'} // ${car.status || 'AVAILABLE'} // $${(car.price || 0).toLocaleString()}
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading garage:', error);
+        garageGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); font-family: var(--font-tech); letter-spacing: 2px; text-transform: uppercase;">ERROR_LOADING_GARAGE</div>';
+    }
+}
+
+async function populateBidsTab() {
+    const bidsList = document.getElementById('profile-bids-list');
+    if (!bidsList) return;
+    
+    try {
+        const response = await fetch('/api/user/bids');
+        const bids = await response.json();
         
-        garageTbody.appendChild(row);
+        if (bids.length === 0) {
+            bidsList.innerHTML = '<div style="text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); font-family: var(--font-tech); letter-spacing: 2px; text-transform: uppercase;">NO_ACTIVE_BIDS</div>';
+            return;
+        }
         
-        // Stagger fade-in animation
-        gsap.fromTo(row, 
-            { opacity: 0, y: 20 },
-            { 
-                opacity: 1, 
-                y: 0, 
-                duration: 0.5, 
-                delay: index * 0.1
+        bidsList.innerHTML = bids.map(bid => {
+            const car = bid.car || {};
+            const timestamp = new Date(bid.timestamp);
+            const isActive = car.status === 'LIVE_AUCTION' || car.isAuction;
+            
+            return `
+                <div class="bid-item">
+                    <div class="bid-item-info">
+                        <div class="bid-item-name">${car.make || 'UNKNOWN'} ${car.model || ''}</div>
+                        <div class="bid-item-meta">${timestamp.toLocaleDateString()} ${timestamp.toLocaleTimeString()}</div>
+                    </div>
+                    <div class="bid-item-amount">$${bid.amount.toLocaleString()}</div>
+                    <div class="bid-item-status">${isActive ? 'ACTIVE' : 'CLOSED'}</div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading bids:', error);
+        bidsList.innerHTML = '<div style="text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); font-family: var(--font-tech); letter-spacing: 2px; text-transform: uppercase;">ERROR_LOADING_BIDS</div>';
+    }
+}
+
+async function populateVaultTab() {
+    const vaultList = document.getElementById('profile-vault-list');
+    if (!vaultList) return;
+    
+    try {
+        const response = await fetch('/api/contractor/assets').catch(() => {
+            // If endpoint doesn't exist or user isn't contractor, return empty
+            return { json: () => [] };
+        });
+        
+        if (!response.ok) {
+            vaultList.innerHTML = '<div style="text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); font-family: var(--font-tech); letter-spacing: 2px; text-transform: uppercase;">ACCESS_DENIED</div>';
+            return;
+        }
+        
+        const cars = await response.json();
+        
+        if (cars.length === 0) {
+            vaultList.innerHTML = '<div style="text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); font-family: var(--font-tech); letter-spacing: 2px; text-transform: uppercase;">VAULT_EMPTY</div>';
+            return;
+        }
+        
+        vaultList.innerHTML = cars.map(car => `
+            <div class="vault-item">
+                <div class="vault-item-info">
+                    <div class="vault-item-name">${car.make} ${car.model}</div>
+                    <div class="vault-item-status">${car.isListed ? 'DEPLOYED' : 'SECURED'}</div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <a href="/showroom?carId=${car._id}" class="vault-item-action" style="text-decoration: none; display: inline-block; padding: 0.5rem 1rem;">VIEW</a>
+                    <button class="vault-item-action" data-car-id="${car._id}" data-listed="${car.isListed}">
+                        ${car.isListed ? 'RECALL' : 'DEPLOY'}
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+        // Setup vault action buttons
+        const vaultActions = vaultList.querySelectorAll('.vault-item-action');
+        vaultActions.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const carId = btn.dataset.carId;
+                const isListed = btn.dataset.listed === 'true';
+                
+                try {
+                    const response = await fetch(`/api/cars/${carId}/toggle-deploy`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (response.ok) {
+                        // Reload vault tab
+                        await populateVaultTab();
+                        // Also refresh marketplace if needed
+                        if (typeof window.initClassifiedGrid === 'function') {
+                            window.initClassifiedGrid();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error toggling deploy:', error);
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error loading vault:', error);
+        vaultList.innerHTML = '<div style="text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); font-family: var(--font-tech); letter-spacing: 2px; text-transform: uppercase;">ERROR_LOADING_VAULT</div>';
+    }
+}
+
+function setupProfileTabs() {
+    const tabs = document.querySelectorAll('.ledger-tab');
+    const panels = document.querySelectorAll('.ledger-panel');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const targetTab = tab.dataset.tab;
+            
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Update active panel
+            panels.forEach(p => p.classList.remove('active'));
+            const targetPanel = document.getElementById(`ledger-${targetTab}`);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
             }
-        );
-        
-        // Setup deploy button click handler
-        const deployBtn = row.querySelector('.deploy-btn.deploy, .deploy-btn.recall');
-        if (deployBtn) {
-            deployBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const carId = deployBtn.dataset.carId || asset.ref;
-                handleDeployToggle(carId, asset.ref);
-            });
-        }
-        
-        // Setup VIEW ASSET button click handler
-        const viewAssetBtn = row.querySelector('.view-asset-btn');
-        if (viewAssetBtn) {
-            viewAssetBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const carId = viewAssetBtn.dataset.carId || asset.ref;
-                await handleViewAsset(carId);
-            });
-        }
+        });
     });
 }
 
-function renderHistory() {
-    const historyTbody = document.getElementById('history-tbody');
-    if (!historyTbody) return;
-    
-    historyTbody.innerHTML = '';
-    
-    if (transactionHistory.length === 0) {
-        historyTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #555; padding: 2rem;">NO_TRANSACTION_HISTORY</td></tr>';
-        return;
-    }
-    
-    transactionHistory.forEach((transaction, index) => {
-        const row = document.createElement('tr');
-        row.className = 'history-row';
-        
-        row.innerHTML = `
-            <td class="asset-ref">${transaction.ref}</td>
-            <td>${transaction.model}</td>
-            <td>${transaction.value}</td>
-            <td>${transaction.date}</td>
-            <td class="status-sold">${transaction.status}</td>
-        `;
-        
-        historyTbody.appendChild(row);
-        
-        // Stagger fade-in animation
-        gsap.fromTo(row, 
-            { opacity: 0, y: 20 },
-            { 
-                opacity: 1, 
-                y: 0, 
-                duration: 0.5, 
-                delay: index * 0.1
-            }
-        );
-    });
-}
+// ============================================
+// TERMINAL DASHBOARD FUNCTIONS REMOVED
+// ============================================
+// renderGarage, renderHistory, renderBids, userGarage, transactionHistory
+// These were used by the old terminal section and have been replaced by profile page functions:
+// - populateGarageTab() - replaces renderGarage()
+// - populateBidsTab() - replaces renderBids()  
+// - populateVaultTab() - new function for contractor vault
+// ============================================
 
-// Global state for user's bids
+// Global state for user's bids (used by profile page)
 let userBids = [];
 
 async function loadBidHistory() {
@@ -604,96 +809,6 @@ async function loadBidHistory() {
     }
 }
 
-function renderBids() {
-    const bidsTbody = document.getElementById('bids-tbody');
-    if (!bidsTbody) return;
-    
-    bidsTbody.innerHTML = '';
-    
-    if (userBids.length === 0) {
-        bidsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #555; padding: 2rem;">NO_BIDS_PLACED</td></tr>';
-        return;
-    }
-    
-    userBids.forEach((bid, index) => {
-        const row = document.createElement('tr');
-        row.className = 'bid-row';
-        
-        const statusClass = bid.status === 'CLOSED' ? 'status-sold' : 'status-listed';
-        const formattedAmount = bid.amount >= 1000000 
-            ? `$${(bid.amount / 1000000).toFixed(1)}M` 
-            : `$${(bid.amount / 1000).toFixed(0)}K`;
-        
-        row.innerHTML = `
-            <td>${bid.asset}</td>
-            <td>${formattedAmount}</td>
-            <td>${bid.date}</td>
-            <td class="${statusClass}">${bid.status}</td>
-        `;
-        
-        bidsTbody.appendChild(row);
-        
-        // Stagger fade-in animation
-        gsap.fromTo(row, 
-            { opacity: 0, y: 20 },
-            { 
-                opacity: 1, 
-                y: 0, 
-                duration: 0.5, 
-                delay: index * 0.1
-            }
-        );
-    });
-}
-
-async function handleDeployToggle(carId, assetRef) {
-    const asset = userGarage.find(a => a.ref === assetRef || a.carId === carId);
-    
-    try {
-        // Check user role to determine endpoint
-        const roleResponse = await fetch('/api/user/role').catch(() => ({ json: () => ({ role: 'user' }) }));
-        const roleData = await roleResponse.json();
-        const userRole = roleData.role || 'user';
-        
-        // Use contractor endpoint if user is contractor
-        const endpoint = userRole === 'contractor' 
-            ? `/api/cars/${carId}/toggle-deploy`
-            : `/api/cars/${carId}/deploy`;
-        
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to toggle deploy');
-        }
-        
-        const data = await response.json();
-        
-        // Get the new listed status
-        const newListedStatus = userRole === 'contractor' ? data.isListed : data.car.isListed;
-        const statusText = newListedStatus ? 'VISIBLE' : 'HIDDEN';
-        
-        // Show alert/toast
-        alert(`ASSET STATUS UPDATED: ${statusText}`);
-        
-        // Re-initialize terminal to refresh the list
-        await initTerminal();
-        
-        // Refresh marketplace grid in background
-        if (typeof initClassifiedGrid === 'function') {
-            initClassifiedGrid();
-        }
-        
-    } catch (error) {
-        console.error('Deploy error:', error);
-        alert('DEPLOY_FAILED: ' + error.message);
-    }
-}
 
 async function handleViewAsset(carId) {
     try {
@@ -767,11 +882,7 @@ async function handleViewAsset(carId) {
             }
         }
         
-        // Scroll to showroom section
-        const showroomSection = document.getElementById('showroom-section');
-        if (showroomSection) {
-            showroomSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        // Navigation handled by routing - no scroll needed
         
     } catch (error) {
         console.error('View asset error:', error);
@@ -779,237 +890,14 @@ async function handleViewAsset(carId) {
     }
 }
 
-function setupLedgerTabs() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetTab = btn.dataset.tab;
-            
-            // Update active states
-            tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === `tab-${targetTab}`) {
-                    content.style.display = 'block';
-                    content.classList.add('active');
-                    // Refresh bid history when switching to bids tab
-                    if (targetTab === 'bids') {
-                        loadBidHistory().then(() => renderBids());
-                    }
-                } else {
-                    content.style.display = 'none';
-                }
-            });
-        });
-    });
-}
+// setupLedgerTabs removed - replaced by profile page ledger tabs
 
-async function setupContractorMode() {
-    try {
-        // Fetch active auctions
-        const response = await fetch('/api/cars/live-auctions');
-        if (!response.ok) throw new Error('Failed to fetch auctions');
-        
-        const auctions = await response.json();
-        
-        // Add admin tab button if it doesn't exist
-        const ledgerTabs = document.querySelector('.ledger-tabs');
-        if (ledgerTabs && !document.querySelector('.tab-btn[data-tab="admin"]')) {
-            const adminTabBtn = document.createElement('button');
-            adminTabBtn.className = 'tab-btn';
-            adminTabBtn.dataset.tab = 'admin';
-            adminTabBtn.textContent = 'ADMIN_OVERRIDE';
-            ledgerTabs.appendChild(adminTabBtn);
-        }
-        
-        // Render admin table
-        renderAdminTable(auctions);
-        
-    } catch (error) {
-        console.error('Contractor mode setup error:', error);
-    }
-}
 
-function renderAdminTable(auctions) {
-    const adminTbody = document.getElementById('admin-tbody');
-    if (!adminTbody) return;
-    
-    adminTbody.innerHTML = '';
-    
-    if (auctions.length === 0) {
-        adminTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #555; padding: 2rem;">NO_ACTIVE_AUCTIONS</td></tr>';
-        return;
-    }
-    
-    auctions.forEach((auction, index) => {
-        const row = document.createElement('tr');
-        row.className = 'admin-row';
-        
-        // Fetch bid count
-        fetch(`/api/cars/${auction._id}/bids`)
-            .then(res => res.json())
-            .then(bids => {
-                const bidCount = bids.length || 0;
-                
-                row.innerHTML = `
-                    <td class="asset-ref">${auction._id.toString().substr(0, 8)}</td>
-                    <td>${auction.make} ${auction.model}</td>
-                    <td>$${auction.currentBid ? auction.currentBid.toLocaleString() : '0'}</td>
-                    <td>${bidCount}</td>
-                    <td>
-                        <button class="deploy-btn terminate-btn" data-car-id="${auction._id}">STOP_AUCTION</button>
-                    </td>
-                `;
-                
-                // Setup terminate button
-                const terminateBtn = row.querySelector('.terminate-btn');
-                if (terminateBtn) {
-                    terminateBtn.addEventListener('click', () => handleTerminateAuction(auction._id));
-                }
-            })
-            .catch(err => {
-                console.error('Bid fetch error:', err);
-                row.innerHTML = `
-                    <td class="asset-ref">${auction._id.toString().substr(0, 8)}</td>
-                    <td>${auction.make} ${auction.model}</td>
-                    <td>$${auction.currentBid ? auction.currentBid.toLocaleString() : '0'}</td>
-                    <td>--</td>
-                    <td>
-                        <button class="deploy-btn terminate-btn" data-car-id="${auction._id}">STOP_AUCTION</button>
-                    </td>
-                `;
-                
-                const terminateBtn = row.querySelector('.terminate-btn');
-                if (terminateBtn) {
-                    terminateBtn.addEventListener('click', () => handleTerminateAuction(auction._id));
-                }
-            });
-        
-        adminTbody.appendChild(row);
-        
-        // Stagger fade-in animation
-        gsap.fromTo(row, 
-            { opacity: 0, y: 20 },
-            { 
-                opacity: 1, 
-                y: 0, 
-                duration: 0.5, 
-                delay: index * 0.1
-            }
-        );
-    });
-}
+// setupBackButton removed - terminal replaced by profile page
 
-async function handleTerminateAuction(carId) {
-    if (!confirm('TERMINATE_AUCTION? This will assign the car to the highest bidder.')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/cars/${carId}/terminate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to terminate auction');
-        }
-        
-        const data = await response.json();
-        
-        // Show success toast
-        showToast(`AUCTION_TERMINATED: ${data.winner.displayName}`);
-        
-        // Reload admin table
-        setupContractorMode();
-        
-    } catch (error) {
-        console.error('Terminate error:', error);
-        showToast('TERMINATE_FAILED');
-    }
-}
+// setupLogoutButton removed - logout handled by navbar.js and setupNavbarLogout()
 
-function setupLogoutButton() {
-    const logoutBtn = document.getElementById('logout-btn');
-    if (!logoutBtn) return;
-    
-    logoutBtn.addEventListener('click', async () => {
-        try {
-            const response = await fetch('/auth/logout', {
-                method: 'POST'
-            });
-            
-            if (response.ok) {
-                // Close terminal first
-                const terminalSection = document.getElementById('terminal-section');
-                if (terminalSection) {
-                    terminalSection.style.display = 'none';
-                    terminalSection.classList.remove('active');
-                }
-                // Redirect to garage door login screen
-                window.location.href = '/';
-            } else {
-                // Fallback to GET logout
-                window.location.href = '/auth/logout';
-            }
-        } catch (error) {
-            console.error('Logout error:', error);
-            // Fallback to GET logout
-            window.location.href = '/auth/logout';
-        }
-    });
-}
-
-function setupSidebarNav() {
-    const sidebarNavs = document.querySelectorAll('.sidebar-nav');
-    const modules = {
-        'id': 'module-id',
-        'net': 'module-net',
-        'log': 'module-log'
-    };
-    
-    sidebarNavs.forEach(nav => {
-        nav.addEventListener('click', () => {
-            const moduleName = nav.dataset.module;
-            
-            // Update active state
-            sidebarNavs.forEach(n => n.classList.remove('active'));
-            nav.classList.add('active');
-            
-            // Show/hide modules
-            Object.values(modules).forEach(moduleId => {
-                const module = document.getElementById(moduleId);
-                if (module) {
-                    module.style.display = 'none';
-                }
-            });
-            
-            const targetModule = document.getElementById(modules[moduleName]);
-            if (targetModule) {
-                targetModule.style.display = 'flex';
-                
-                // Animate module appearance
-                gsap.fromTo(targetModule,
-                    { opacity: 0, y: 20 },
-                    { opacity: 1, y: 0, duration: 0.3 }
-                );
-            }
-        });
-    });
-    
-    // Show Identity module by default
-    const defaultNav = document.querySelector('.sidebar-nav[data-module="id"]');
-    if (defaultNav) {
-        defaultNav.click();
-    }
-}
+// setupSidebarNav removed - replaced by profile page layout
 
 function showToast(message) {
     const toast = document.getElementById('toast-notification');
@@ -1026,98 +914,9 @@ function showToast(message) {
     }, 3000);
 }
 
-// Function to show terminal (can be called from elsewhere)
-function showTerminal() {
-    const terminalSection = document.getElementById('terminal-section');
-    if (terminalSection) {
-        terminalSection.style.display = 'block';
-        terminalSection.classList.add('active');
-        
-        // Add CRT turn-on animation
-        terminalSection.classList.add('crt-turn-on');
-        
-        // Remove animation class after animation completes
-        setTimeout(() => {
-            terminalSection.classList.remove('crt-turn-on');
-        }, 800);
-        
-        terminalSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
+// showTerminal removed - terminal replaced by profile page
 
-// ============================================
-// SECRET TERMINAL TRIGGER (System Uplink)
-// ============================================
-function initTerminalTrigger() {
-    const trigger = document.getElementById('terminal-trigger');
-    const statusLed = document.getElementById('status-led');
-    const statusText = document.getElementById('status-text');
-    
-    if (!trigger || !statusLed || !statusText) return;
-    
-    // Check if user is logged in
-    // Use the global isLoggedIn variable if available, otherwise check terminal data
-    const userAlias = document.getElementById('user-alias');
-    const isAuthenticated = isLoggedIn || (userAlias && userAlias.textContent && userAlias.textContent !== 'OPERATOR_GHOST');
-    
-    // Update LED and text based on auth status
-    if (isAuthenticated) {
-        statusLed.classList.add('authenticated');
-        const alias = userAlias ? userAlias.textContent : 'OPERATOR';
-        statusText.textContent = `OP_ID :: ${alias}`;
-    } else {
-        statusLed.classList.remove('authenticated');
-        statusText.textContent = 'SYS :: MONITORING';
-    }
-    
-    // Click event handler
-    trigger.addEventListener('click', () => {
-        // Optional: Play sound effect (commented out - uncomment if you have a sound file)
-        // const audio = new Audio('/assets/sounds/terminal_access.mp3');
-        // audio.volume = 0.3;
-        // audio.play().catch(err => console.log('Sound play failed:', err));
-        
-        // Show terminal with animation
-        showTerminal();
-        
-        // Add a brief flash effect to the trigger
-        trigger.style.opacity = '0.5';
-        setTimeout(() => {
-            trigger.style.opacity = '';
-        }, 200);
-    });
-    
-    // Enhanced hover effect - show glitch text
-    let hoverTimeout;
-    trigger.addEventListener('mouseenter', () => {
-        clearTimeout(hoverTimeout);
-        const originalText = statusText.textContent;
-        
-        hoverTimeout = setTimeout(() => {
-            if (trigger.matches(':hover')) {
-                statusText.textContent = '[ OPEN_TERMINAL ]';
-                statusText.style.color = 'var(--thermal-red)';
-                statusText.style.textShadow = '0 0 10px rgba(255, 51, 0, 0.8)';
-            }
-        }, 300);
-    });
-    
-    trigger.addEventListener('mouseleave', () => {
-        clearTimeout(hoverTimeout);
-        statusText.style.color = '';
-        statusText.style.textShadow = '';
-        
-        // Restore original text
-        const userAlias = document.getElementById('user-alias');
-        const isAuthenticated = isLoggedIn || (userAlias && userAlias.textContent && userAlias.textContent !== 'OPERATOR_GHOST');
-        if (isAuthenticated) {
-            const alias = userAlias ? userAlias.textContent : 'OPERATOR';
-            statusText.textContent = `OP_ID :: ${alias}`;
-        } else {
-            statusText.textContent = 'SYS :: MONITORING';
-        }
-    });
-}
+// initTerminalTrigger removed - terminal replaced by profile page
 
 // ============================================
 // GLOBAL CROSSHAIR CURSOR
@@ -1139,14 +938,18 @@ function initGlobalCursor() {
         mouseY = e.clientY;
     });
     
-    // Smooth cursor follow with GSAP
+    // Smooth cursor follow - use direct style updates for accuracy
+    let currentX = 0;
+    let currentY = 0;
+    
     function updateCursor() {
-        gsap.to(globalCursor, {
-            x: mouseX,
-            y: mouseY,
-            duration: 0.3,
-            ease: "power2.out"
-        });
+        // Smooth interpolation
+        currentX += (mouseX - currentX) * 0.15;
+        currentY += (mouseY - currentY) * 0.15;
+        
+        // Apply position with CSS transform (works with translate(-50%, -50%))
+        globalCursor.style.left = currentX + 'px';
+        globalCursor.style.top = currentY + 'px';
         
         requestAnimationFrame(updateCursor);
     }
@@ -1164,76 +967,4 @@ function initGlobalCursor() {
     updateCursor();
 }
 
-// ============================================
-// SECRET TERMINAL TRIGGER (System Uplink)
-// ============================================
-function initTerminalTrigger() {
-    const trigger = document.getElementById('terminal-trigger');
-    const statusLed = document.getElementById('status-led');
-    const statusText = document.getElementById('status-text');
-    
-    if (!trigger || !statusLed || !statusText) return;
-    
-    // Check if user is logged in
-    // Use the global isLoggedIn variable if available, otherwise check terminal data
-    const userAlias = document.getElementById('user-alias');
-    const isAuthenticated = isLoggedIn || (userAlias && userAlias.textContent && userAlias.textContent !== 'OPERATOR_GHOST');
-    
-    // Update LED and text based on auth status
-    if (isAuthenticated) {
-        statusLed.classList.add('authenticated');
-        const alias = userAlias ? userAlias.textContent : 'OPERATOR';
-        statusText.textContent = `OP_ID :: ${alias}`;
-    } else {
-        statusLed.classList.remove('authenticated');
-        statusText.textContent = 'SYS :: MONITORING';
-    }
-    
-    // Click event handler
-    trigger.addEventListener('click', () => {
-        // Optional: Play sound effect (commented out - uncomment if you have a sound file)
-        // const audio = new Audio('/assets/sounds/terminal_access.mp3');
-        // audio.volume = 0.3;
-        // audio.play().catch(err => console.log('Sound play failed:', err));
-        
-        // Show terminal with animation
-        showTerminal();
-        
-        // Add a brief flash effect to the trigger
-        trigger.style.opacity = '0.5';
-        setTimeout(() => {
-            trigger.style.opacity = '';
-        }, 200);
-    });
-    
-    // Enhanced hover effect - show glitch text
-    let hoverTimeout;
-    trigger.addEventListener('mouseenter', () => {
-        clearTimeout(hoverTimeout);
-        const originalText = statusText.textContent;
-        
-        hoverTimeout = setTimeout(() => {
-            if (trigger.matches(':hover')) {
-                statusText.textContent = '[ OPEN_TERMINAL ]';
-                statusText.style.color = 'var(--thermal-red)';
-                statusText.style.textShadow = '0 0 10px rgba(255, 51, 0, 0.8)';
-            }
-        }, 300);
-    });
-    
-    trigger.addEventListener('mouseleave', () => {
-        clearTimeout(hoverTimeout);
-        statusText.style.color = '';
-        statusText.style.textShadow = '';
-        
-        // Restore original text
-        const userAlias = document.getElementById('user-alias');
-        const isAuthenticated = isLoggedIn || (userAlias && userAlias.textContent && userAlias.textContent !== 'OPERATOR_GHOST');
-        if (isAuthenticated) {
-            const alias = userAlias ? userAlias.textContent : 'OPERATOR';
-            statusText.textContent = `OP_ID :: ${alias}`;
-        } else {
-            statusText.textContent = 'SYS :: MONITORING';
-        }
-    });
-}
+// Duplicate initTerminalTrigger removed

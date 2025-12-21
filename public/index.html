@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Garage</title>
+    <title>The Garage - Home</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Grotesk:wght@300;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
 </head>
-<body>
-
+<body class="home-page">
     <div class="noise-overlay"></div>
     
     <!-- Global Crosshair Cursor -->
@@ -20,361 +17,35 @@
         <div class="cursor-crosshair-v"></div>
     </div>
 
-    <!-- Secret Terminal Trigger (System Uplink) -->
-    <div id="terminal-trigger" class="system-uplink">
-        <span class="status-led" id="status-led"></span>
-        <span class="status-text" id="status-text">SYS :: MONITORING</span>
-    </div>
+    <!-- Home Page: Marshall Motors Entry -->
+    <section id="garage-door-section" class="home-page">
+        <!-- Top Navigation -->
+        <nav class="hero-nav">
+            <div class="hero-nav-content">
+                <div class="hero-nav-links">
+                    <button class="nav-link" id="hero-login-btn">LOGIN</button>
+                    <span class="nav-divider">/</span>
+                    <button class="nav-link" id="hero-join-btn">JOIN</button>
+                </div>
+            </div>
+        </nav>
 
-    <section id="garage-door-section">
-        <!-- Parallax Background - Shows showroom behind door -->
-        <div class="parallax-bg">
-            <img src="/assets/photo/porsche_911.png" alt="Showroom Preview" id="parallax-img">
+        <!-- Background Image with Blur and Overlay -->
+        <div class="hero-bg">
+            <img src="/assets/photo/porsche_911.png" alt="Garage Interior" id="hero-bg-img">
+            <div class="hero-overlay"></div>
         </div>
-        
-        <!-- Chain Tracks - Left and Right -->
-        <div class="chain-track chain-track-left"></div>
-        <div class="chain-track chain-track-right"></div>
-        
-        <!-- Door Assembly with Multiple Panels -->
-        <div class="door-assembly">
-            <div class="door-panel panel-1">
-                <div class="panel-texture"></div>
-            </div>
-            <div class="door-panel panel-2">
-                <div class="panel-texture"></div>
-            </div>
-            <div class="door-panel panel-3">
-                <div class="panel-texture"></div>
-            </div>
-            <div class="door-panel panel-4">
-                <div class="panel-texture"></div>
-            </div>
-            <div class="door-panel panel-5">
-                <div class="panel-texture"></div>
-                <div class="hazard-stripe"></div>
-                <h2 class="panel-title">THE GARAGE</h2>
-            </div>
-        </div>
-        
-        <!-- Lock Container - Centered on door -->
-        <div class="lock-container" id="auth-trigger">
-            <div class="shackle"></div>
-            <div class="body">
-                <span class="status-text">LOCKED</span>
-            </div>
-        </div>
-        
-        <h1 class="hero-title">THE GARAGE</h1>
-    </section>
 
-    <section id="showroom-section">
-        <!-- Layer 1: Background Watermark (z-index: 0) -->
-        <div class="bg-watermark">
-            <h1 id="archive-watermark">ARCHIVE</h1>
-        </div>
-        
-        <!-- Layer 2: Car Wrapper with Vignette Mask (z-index: 10) -->
-        <div class="car-wrapper">
-            <!-- Thermal Layer (Bottom) - Red heat map view -->
-            <div class="layer thermal">
-                <img src="/assets/photo/porsche_911.png" alt="Thermal Scan" id="thermal-img">
-            </div>
-    
-            <!-- Real Layer (Top) - Masked to reveal thermal underneath -->
-            <div class="layer real" id="real-layer">
-                <img src="/assets/photo/porsche_911.png" alt="Car" id="real-img">
-            </div>
-        </div>
-        
-        <!-- Layer 4: Scanner Cursor (z-index: 30) -->
-        <div class="scanner-cursor" id="scanner-cursor">
-            <div class="crosshair-h"></div>
-            <div class="crosshair-v"></div>
-        </div>
-        
-        <!-- Navigation Arrows - Left/Right Edges (z-index: 25) -->
-        <button class="stealth-nav stealth-nav-left" id="prev-btn" aria-label="Previous car">
-            <span>&lt;</span>
-        </button>
-        <button class="stealth-nav stealth-nav-right" id="next-btn" aria-label="Next car">
-            <span>&gt;</span>
-        </button>
-        
-        <!-- Stealth Footer - Minimal Status Bar (z-index: 25) -->
-        <div class="stealth-footer">
-            <div class="footer-content">
-                <!-- Left Group: Asset ID & Status -->
-                <div class="footer-group footer-left">
-                    <span class="asset-id" id="stealth-asset-id">REF: _001</span>
-                    <span class="status-indicator" id="stealth-status-indicator">
-                        <span class="status-dot"></span>
-                    </span>
-                </div>
-                
-                <!-- Center Group: Car Name -->
-                <div class="footer-group footer-center">
-                    <span class="car-name" id="stealth-car-name">MCLAREN F1</span>
-                </div>
-                
-                <!-- Right Group: Price & Action Button -->
-                <div class="footer-group footer-right">
-                    <span class="car-price" id="stealth-car-price">$20M</span>
-                    <button class="stealth-action-btn" id="action-btn">
-                        <span id="action-text">BUY NOW</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Hidden Specs Drawer -->
-            <div class="specs-drawer">
-                <div class="drawer-content">
-                    <div class="drawer-row">
-                        <span class="drawer-label">ENGINE</span>
-                        <span class="drawer-val redacted" id="drawer-engine"></span>
-                    </div>
-                    <div class="drawer-row">
-                        <span class="drawer-label">0-60</span>
-                        <span class="drawer-val redacted" id="drawer-zerosixty"></span>
-                    </div>
-                    <!-- Bid History Section -->
-                    <div class="drawer-row drawer-section-header">
-                        <span class="drawer-label">BID_HISTORY</span>
-                    </div>
-                    <div id="bid-history-container" class="bid-history-list">
-                        <!-- Populated by JavaScript -->
-                    </div>
-                </div>
-            </div>
+        <!-- Center Content -->
+        <div class="hero-content">
+            <h1 class="hero-main-title">THE GARAGE</h1>
+            <p class="hero-subtitle">EST. 2025 // PRIVATE COLLECTION</p>
+            <div class="hero-divider"></div>
+            <a href="/showroom" class="hero-enter-btn" id="hero-enter-btn">ENTER SHOP</a>
         </div>
     </section>
 
-    <section id="market-section">
-        <div class="market-header">
-            <h2>CLASSIFIED_ASSETS</h2>
-            <span>[SECURE_CONNECTION]</span>
-        </div>
-    
-        <div class="asset-grid" id="asset-grid">
-            <!-- Cards will be populated by JavaScript -->
-        </div>
-    </section>
-
-    <!-- SCREEN 4: THE TERMINAL (Cyber-Industrial Command Center) -->
-    <section id="terminal-section" style="display: none;">
-        <div class="crt-scanline"></div>
-        <div class="terminal-container">
-            <!-- Back Button (Top Left Grid Cell) -->
-            <button class="terminal-back-btn" id="terminal-back-btn">
-                <span class="back-arrow">←</span>
-            </button>
-            <!-- Sidebar Rail (Left) -->
-            <nav class="terminal-sidebar">
-                <button class="sidebar-nav active" data-module="id">
-                    <span class="nav-code">[ID]</span>
-                    <span class="nav-label">IDENTITY</span>
-                </button>
-                <button class="sidebar-nav" data-module="net">
-                    <span class="nav-code">[NET]</span>
-                    <span class="nav-label">NETWORK</span>
-                </button>
-                <button class="sidebar-nav" data-module="log">
-                    <span class="nav-code">[LOG]</span>
-                    <span class="nav-label">LOGISTICS</span>
-                </button>
-            </nav>
-
-            <!-- Dashboard Grid (Right) -->
-            <div class="terminal-dashboard-grid">
-                <!-- Profile Card Module -->
-                <div class="terminal-module module-profile" id="module-id">
-                    <div class="module-header">
-                        <span class="module-label">OPERATOR_PROFILE</span>
-                        <span class="module-status">ONLINE</span>
-                    </div>
-                    <div class="profile-content">
-                        <div class="geometric-avatar" id="geometric-avatar"></div>
-                        <div class="profile-info">
-                            <div class="operator-alias" id="operator-alias">OPERATOR_01</div>
-                            <div class="operator-level">
-                                <span class="label">CLEARANCE</span>
-                                <span class="value" id="operator-level">LEVEL_04</span>
-                            </div>
-                            <div class="operator-id" id="operator-id">ID: [REDACTED]</div>
-                            <button class="logout-btn" id="logout-btn">TERMINATE_SESSION</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Satellite Uplink Module -->
-                <div class="terminal-module module-satellite" id="module-net">
-                    <div class="module-header">
-                        <span class="module-label">SATELLITE_UPLINK</span>
-                        <span class="module-status">ACTIVE</span>
-                    </div>
-                    <div class="satellite-content">
-                        <div class="satellite-viewport">
-                            <img src="/assets/dark_map.jpg" alt="Satellite Feed" class="satellite-map-image">
-                            <div class="radar-pulse" id="radar-pulse"></div>
-                            <div class="satellite-coords" id="satellite-coords">--.--°N, --.--°W</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Asset Ledger Module (Main Area) -->
-                <div class="terminal-module module-ledger" id="module-log">
-                    <div class="module-header">
-                        <span class="module-label">ASSET_LEDGER</span>
-                        <div class="ledger-tabs">
-                            <button class="tab-btn active" data-tab="garage">CURRENT_GARAGE</button>
-                            <button class="tab-btn" data-tab="history">TRANSACTION_HISTORY</button>
-                            <button class="tab-btn" data-tab="bids">BID_HISTORY</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Current Garage Tab -->
-                    <div class="tab-content active" id="tab-garage">
-                        <table class="ledger-table">
-                            <thead>
-                                <tr>
-                                    <th>ASSET_REF</th>
-                                    <th>MODEL</th>
-                                    <th>VALUE</th>
-                                    <th>STATUS</th>
-                                    <th>ACTIONS</th>
-                                </tr>
-                            </thead>
-                            <tbody id="garage-tbody">
-                                <!-- Populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Transaction History Tab -->
-                    <div class="tab-content" id="tab-history">
-                        <table class="ledger-table">
-                            <thead>
-                                <tr>
-                                    <th>ASSET_REF</th>
-                                    <th>MODEL</th>
-                                    <th>VALUE</th>
-                                    <th>DATE</th>
-                                    <th>STATUS</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-tbody">
-                                <!-- Populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Bid History Tab -->
-                    <div class="tab-content" id="tab-bids">
-                        <table class="ledger-table">
-                            <thead>
-                                <tr>
-                                    <th>ASSET</th>
-                                    <th>BID_AMOUNT</th>
-                                    <th>DATE</th>
-                                    <th>STATUS</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bids-tbody">
-                                <!-- Populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Contractor Admin Override Tab (Hidden by default) -->
-                    <div class="tab-content" id="tab-admin" style="display: none;">
-                        <div class="admin-header">
-                            <span class="admin-label">ADMIN_OVERRIDE</span>
-                            <span class="admin-status">CONTRACTOR_MODE</span>
-                        </div>
-                        <table class="ledger-table">
-                            <thead>
-                                <tr>
-                                    <th>ASSET_REF</th>
-                                    <th>MODEL</th>
-                                    <th>CURRENT_BID</th>
-                                    <th>BIDDERS</th>
-                                    <th>ACTION</th>
-                                </tr>
-                            </thead>
-                            <tbody id="admin-tbody">
-                                <!-- Populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Toast Notification -->
-        <div class="toast-notification" id="toast-notification">
-            <span class="toast-message" id="toast-message"></span>
-        </div>
-    </section>
-
-    <section id="auction-section">
-        <div class="terminal-grid">
-            
-            <div class="grid-item header-panel">
-                <h2>AUCTION_LIVE_FEED</h2>
-                <div class="live-indicator" id="live-indicator">
-                    <span class="blink">●</span> <span id="status-text">CONNECTED</span>
-                </div>
-            </div>
-    
-            <!-- Auction Tabs -->
-            <div class="grid-item tabs-panel">
-                <div class="tabs-container" id="auction-tabs">
-                    <!-- Tabs will be populated by JavaScript -->
-                </div>
-            </div>
-    
-            <div class="grid-item stats-panel">
-                <div class="stat-row">
-                    <span class="label">MAKE</span>
-                    <span class="value" id="stat-make">-</span>
-                </div>
-                <div class="stat-row">
-                    <span class="label">MODEL</span>
-                    <span class="value" id="stat-model">-</span>
-                </div>
-                <div class="stat-row">
-                    <span class="label">YEAR</span>
-                    <span class="value" id="stat-year">-</span>
-                </div>
-                <div class="stat-row">
-                    <span class="label">RESERVE</span>
-                    <span class="value" id="stat-reserve">-</span>
-                </div>
-            </div>
-    
-            <div class="grid-item feed-panel">
-                <div class="feed-header">BID_HISTORY</div>
-                <ul class="bid-list" id="bid-list">
-                    <!-- Bids will be populated by JavaScript -->
-                </ul>
-            </div>
-    
-            <div class="grid-item action-panel">
-                <div class="current-price-display">
-                    <span class="label">CURRENT_BID</span>
-                    <span class="price-large" id="current-price">$0</span>
-                </div>
-                
-                <form id="bid-form">
-                    <input type="number" id="bid-amount" placeholder="ENTER_AMOUNT" min="0" class="terminal-input" step="1000">
-                    <button type="submit" class="terminal-btn" id="bid-submit-btn">PLACE_BID ></button>
-                </form>
-                <div class="bid-error" id="bid-error"></div>
-            </div>
-    
-        </div>
-    </section>
-
+    <!-- Auth Modals -->
     <div class="modal-overlay" id="login-modal">
         <div class="modal-content">
             <h2>ACCESS_REQUIRED</h2>
@@ -414,7 +85,7 @@
         </div>
     </div>
     
-    <!-- Login Modal (Hidden by default) -->
+    <!-- Login Modal -->
     <div class="modal-overlay" id="login-form-modal">
         <div class="modal-content">
             <h2>LOG IN</h2>
@@ -451,67 +122,7 @@
         </div>
     </div>
 
-    <!-- Payment Terminal Modal -->
-    <div class="payment-terminal-overlay" id="payment-modal">
-        <div class="payment-terminal">
-            <div class="terminal-header">
-                <h2 class="terminal-title">WIRE_TRANSFER_PROTOCOL</h2>
-                <span class="terminal-asset" id="terminal-car-name">ASSET_NAME</span>
-                <span class="terminal-amount" id="terminal-amount">$0.00</span>
-            </div>
-            
-            <div class="terminal-body">
-                <!-- Billing Information Section -->
-                <div class="terminal-section">
-                    <label class="terminal-label">BILLING_INFORMATION</label>
-                    <div class="billing-form">
-                        <input type="text" id="billing-name" class="terminal-input" placeholder="FULL_NAME" required>
-                        <input type="email" id="billing-email" class="terminal-input" placeholder="EMAIL_ADDRESS" required>
-                        <input type="text" id="billing-line1" class="terminal-input" placeholder="ADDRESS_LINE_1" required>
-                        <input type="text" id="billing-line2" class="terminal-input" placeholder="ADDRESS_LINE_2 (OPTIONAL)">
-                        <div class="billing-row">
-                            <input type="text" id="billing-city" class="terminal-input" placeholder="CITY" required>
-                            <input type="text" id="billing-state" class="terminal-input" placeholder="STATE" required>
-                            <input type="text" id="billing-postal" class="terminal-input" placeholder="ZIP_CODE" required>
-                        </div>
-                        <select id="billing-country" class="terminal-input" required>
-                            <option value="US">UNITED_STATES</option>
-                            <option value="CA">CANADA</option>
-                            <option value="GB">UNITED_KINGDOM</option>
-                            <option value="AU">AUSTRALIA</option>
-                            <option value="DE">GERMANY</option>
-                            <option value="FR">FRANCE</option>
-                            <option value="IT">ITALY</option>
-                            <option value="JP">JAPAN</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- Payment Information Section -->
-                <div class="terminal-section">
-                    <label class="terminal-label">CARD_INFORMATION</label>
-                    <div class="test-mode-notice">
-                        <span class="test-badge">TEST_MODE</span>
-                        <span class="test-info">Use Stripe test cards: 4242 4242 4242 4242 (any future date, any CVC)</span>
-                    </div>
-                    <div id="card-element" class="stripe-element-container"></div>
-                </div>
-                
-                <div class="terminal-status" id="payment-status"></div>
-                
-                <div class="terminal-actions">
-                    <button id="submit-payment" class="terminal-submit-btn">
-                        <span id="submit-text">INITIATE_TRANSFER</span>
-                        <span id="submit-loader" class="loader" style="display: none;">PROCESSING...</span>
-                    </button>
-                    <button class="terminal-cancel-btn" id="close-payment-modal">ABORT</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <script src="components/navbar.js"></script>
     <script src="js/app.js"></script>
-    <script src="js/archive.js"></script>
-    <script src="js/auction.js"></script>
 </body>
 </html>

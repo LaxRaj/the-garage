@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Garage - Profile</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Grotesk:wght@300;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body class="profile-page">
+    <div class="noise-overlay"></div>
+    
+    <!-- Global Crosshair Cursor -->
+    <div class="global-cursor" id="global-cursor">
+        <div class="cursor-crosshair-h"></div>
+        <div class="cursor-crosshair-v"></div>
+    </div>
+
+    <!-- Profile Page: Executive Dashboard -->
+    <div id="profile-section" class="profile-section profile-page">
+        <div class="profile-container">
+            <!-- Left Column: Identity -->
+            <div class="profile-identity">
+                <div class="identity-card">
+                    <div class="avatar-container">
+                        <div class="profile-avatar" id="profile-avatar"></div>
+                    </div>
+                    <div class="identity-info">
+                        <h2 class="profile-alias" id="profile-alias">OPERATOR_01</h2>
+                        <div class="profile-meta">
+                            <div class="meta-row">
+                                <span class="meta-label">MEMBER SINCE</span>
+                                <span class="meta-value" id="profile-member-since">--/--/----</span>
+                            </div>
+                            <div class="meta-row">
+                                <span class="meta-label">ACCOUNT STATUS</span>
+                                <span class="meta-value status-verified" id="profile-status">VERIFIED BUYER</span>
+                            </div>
+                            <div class="meta-row">
+                                <span class="meta-label">OPERATOR ID</span>
+                                <span class="meta-value" id="profile-operator-id">[REDACTED]</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: The Ledger -->
+            <div class="profile-ledger">
+                <div class="ledger-header">
+                    <h2>THE LEDGER</h2>
+                </div>
+                <div class="ledger-tabs">
+                    <button class="ledger-tab active" data-tab="garage">MY GARAGE</button>
+                    <button class="ledger-tab" data-tab="bids">ACTIVE BIDS</button>
+                    <button class="ledger-tab contractor-only" data-tab="vault" style="display: none;">VAULT MANAGEMENT</button>
+                </div>
+                <div class="ledger-content">
+                    <!-- MY GARAGE Tab -->
+                    <div class="ledger-panel active" id="ledger-garage">
+                        <div class="garage-grid" id="profile-garage-grid">
+                            <!-- Cars will be populated here -->
+                        </div>
+                    </div>
+                    <!-- ACTIVE BIDS Tab -->
+                    <div class="ledger-panel" id="ledger-bids">
+                        <div class="bids-list" id="profile-bids-list">
+                            <!-- Bids will be populated here -->
+                        </div>
+                    </div>
+                    <!-- VAULT MANAGEMENT Tab (Contractor Only) -->
+                    <div class="ledger-panel" id="ledger-vault">
+                        <div class="vault-list" id="profile-vault-list">
+                            <!-- Vault assets will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="components/navbar.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+
